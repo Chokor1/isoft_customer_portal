@@ -1,0 +1,10 @@
+{
+  "js/isoft_customer_portal.js": ["public/js/isoft_customer_portal.js"],
+  "js/customer_dashboard.js": ["public/js/customer_dashboard.js"],
+  "js/customer_ledger.js": ["public/js/customer_ledger.js"],
+  "js/customer_invoices.js": ["public/js/customer_invoices.js"],
+  "js/customer_quotations.js": ["public/js/customer_quotations.js"],
+  "js/customer_sales_orders.js": ["public/js/customer_sales_orders.js"],
+  "js/customer_delivery_notes.js": ["public/js/customer_delivery_notes.js"],
+  "css/isoft_customer_portal.css": ["public/css/isoft_customer_portal.css"]
+} 
