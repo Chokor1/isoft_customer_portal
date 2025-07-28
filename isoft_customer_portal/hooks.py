@@ -2,8 +2,8 @@ from . import __version__ as app_version
 
 app_name = "isoft_customer_portal"
 app_title = "Isoft Customer Portal"
-app_publisher = "Abbass  Chokor"
-app_description = "Isoft Customer Portal"
+app_publisher = "Abbass Chokor"
+app_description = "The isoft Customer Portal is a user-friendly web application seamlessly integrated with ERPNext, designed to empower customers with real-time access to their business data and transactions."
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "abbasschokor225@gmail.com"
@@ -13,56 +13,53 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/isoft_customer_portal/css/isoft_customer_portal.css"
-# app_include_js = "/assets/isoft_customer_portal/js/isoft_customer_portal.js"
+app_include_css = "/assets/css/isoft_customer_portal.css"
+app_include_js = "/assets/js/isoft_customer_portal.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/isoft_customer_portal/css/isoft_customer_portal.css"
-# web_include_js = "/assets/isoft_customer_portal/js/isoft_customer_portal.js"
+web_include_css = "/assets/css/isoft_customer_portal.css"
+web_include_js = "/assets/js/isoft_customer_portal.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "isoft_customer_portal/public/scss/website"
-
-# include js, css files in header of web form
-# webform_include_js = {"doctype": "public/js/doctype.js"}
-# webform_include_css = {"doctype": "public/css/doctype.css"}
+website_theme_scss = "isoft_customer_portal/public/scss/website"
 
 # include js in page
-# page_js = {"page" : "public/js/file.js"}
-
-# include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
-# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
-# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+page_js = {
+    "customer-dashboard": "public/js/customer_dashboard.js",
+    "customer-ledger": "public/js/customer_ledger.js",
+    "customer-invoices": "public/js/customer_invoices.js",
+    "customer-quotations": "public/js/customer_quotations.js",
+    "customer-delivery-notes": "public/js/customer_delivery_notes.js",
+    "customer-sales-orders": "public/js/customer_sales_orders.js"
+}
 
 # Home Pages
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "customer-dashboard"
 
 # website user home page (by Role)
-# role_home_page = {
-#	"Role": "home_page"
-# }
+role_home_page = {
+	"Customer": "customer-dashboard"
+}
 
 # Generators
 # ----------
 
 # automatically create page for each record of this doctype
-# website_generators = ["Web Page"]
+website_generators = ["Web Page"]
 
 # Installation
 # ------------
 
 # before_install = "isoft_customer_portal.install.before_install"
-# after_install = "isoft_customer_portal.install.after_install"
+after_install = "isoft_customer_portal.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "isoft_customer_portal.uninstall.before_uninstall"
+before_uninstall = "isoft_customer_portal.install.before_uninstall"
 # after_uninstall = "isoft_customer_portal.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -75,13 +72,21 @@ app_license = "MIT"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-#	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-#	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"Sales Invoice": "isoft_customer_portal.permissions.get_sales_invoice_permission_query_conditions",
+	"Quotation": "isoft_customer_portal.permissions.get_quotation_permission_query_conditions",
+	"Delivery Note": "isoft_customer_portal.permissions.get_delivery_note_permission_query_conditions",
+	"Sales Order": "isoft_customer_portal.permissions.get_sales_order_permission_query_conditions",
+	"GL Entry": "isoft_customer_portal.permissions.get_gl_entry_permission_query_conditions"
+}
+
+has_permission = {
+	"Sales Invoice": "isoft_customer_portal.permissions.has_sales_invoice_permission",
+	"Quotation": "isoft_customer_portal.permissions.has_quotation_permission",
+	"Delivery Note": "isoft_customer_portal.permissions.has_delivery_note_permission",
+	"Sales Order": "isoft_customer_portal.permissions.has_sales_order_permission",
+	"GL Entry": "isoft_customer_portal.permissions.has_gl_entry_permission"
+}
 
 # DocType Class
 # ---------------
@@ -162,22 +167,30 @@ app_license = "MIT"
 
 user_data_fields = [
 	{
-		"doctype": "{doctype_1}",
-		"filter_by": "{filter_by}",
-		"redact_fields": ["{field_1}", "{field_2}"],
+		"doctype": "Sales Invoice",
+		"filter_by": "customer",
+		"redact_fields": ["customer_address", "shipping_address"],
 		"partial": 1,
 	},
 	{
-		"doctype": "{doctype_2}",
-		"filter_by": "{filter_by}",
+		"doctype": "Quotation",
+		"filter_by": "party_name",
 		"partial": 1,
 	},
 	{
-		"doctype": "{doctype_3}",
-		"strict": False,
+		"doctype": "Delivery Note",
+		"filter_by": "customer",
+		"partial": 1,
 	},
 	{
-		"doctype": "{doctype_4}"
+		"doctype": "Sales Order",
+		"filter_by": "customer",
+		"partial": 1,
+	},
+	{
+		"doctype": "GL Entry",
+		"filter_by": "party",
+		"partial": 1,
 	}
 ]
 
