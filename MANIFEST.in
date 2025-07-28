@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include isoft_customer_portal *.css
+recursive-include isoft_customer_portal *.csv
+recursive-include isoft_customer_portal *.html
+recursive-include isoft_customer_portal *.ico
+recursive-include isoft_customer_portal *.js
+recursive-include isoft_customer_portal *.json
+recursive-include isoft_customer_portal *.md
+recursive-include isoft_customer_portal *.png
+recursive-include isoft_customer_portal *.py
+recursive-include isoft_customer_portal *.svg
+recursive-include isoft_customer_portal *.txt
+recursive-exclude isoft_customer_portal *.pyc
