@@ -9,7 +9,7 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
     init() {
         this.loadDashboardData();
         this.bindEvents();
-        this.setupAutoRefresh();
+        this.initializeCharts();
     }
 
     bindEvents() {
@@ -18,7 +18,7 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
         $(document).on('click', '.export-pdf-btn', () => this.exportPDF());
         
         // Refresh button
-        $(document).on('click', '.refresh-btn', () => this.loadDashboardData());
+        $(document).on('click', '.refresh-btn', () => this.refreshData());
         
         // Transaction row clicks
         $(document).on('click', '.transaction-row', (e) => {
@@ -38,6 +38,9 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
                 if (r.message) {
                     this.updateStatistics(r.message);
                 }
+            },
+            error: (r) => {
+                this.hideLoading();
             }
         });
 
@@ -49,6 +52,27 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
                 if (r.message) {
                     this.updateRecentTransactions(r.message);
                 }
+            },
+            error: (r) => {
+                // Error loading recent transactions
+            }
+        });
+
+        // Load customer balance from ledger
+        frappe.call({
+            method: 'isoft_customer_portal.api.get_customer_ledger',
+            args: {
+                filters: JSON.stringify({}),
+                page: 1,
+                page_length: 1
+            },
+            callback: (r) => {
+                if (r.message && r.message.summary) {
+                    this.updateBalance(r.message.summary);
+                }
+                this.hideLoading();
+            },
+            error: (r) => {
                 this.hideLoading();
             }
         });
@@ -59,15 +83,46 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
         $('#total-quotations').text(stats.total_quotations || 0);
         $('#total-sales-orders').text(stats.total_sales_orders || 0);
         $('#total-deliveries').text(stats.total_deliveries || 0);
-        $('#outstanding-amount').text(frappe.format_currency(stats.outstanding_amount || 0));
+        $('#total-payments').text(stats.total_payments || 0);
+    }
+
+    updateBalance(summary) {
+        // Format balance with company currency
+        const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const balance = summary.balance || 0;
+        const formattedBalance = isoft_customer_portal.utils.formatCurrency(balance, currency);
+        
+        // Update balance text
+        $('#current-balance').text(formattedBalance);
+        
+        // Apply color coding based on balance
+        const balanceElement = $('#current-balance');
+        const balanceCard = $('#balance-card');
+        
+        // Remove previous classes
+        balanceElement.removeClass('balance-positive balance-negative balance-zero');
+        balanceCard.removeClass('positive negative');
+        
+        if (balance > 0) {
+            // Positive balance - customer owes money (red)
+            balanceElement.addClass('balance-positive');
+            balanceCard.addClass('positive');
+        } else if (balance < 0) {
+            // Negative balance - customer has credit (green)
+            balanceElement.addClass('balance-negative');
+            balanceCard.addClass('negative');
+        } else {
+            // Zero balance (gray)
+            balanceElement.addClass('balance-zero');
+        }
     }
 
     updateRecentTransactions(transactions) {
         const container = $('#recent-transactions');
         container.empty();
 
-        if (transactions.length === 0) {
-            container.html('<div class="no-data">No recent transactions found</div>');
+        if (!transactions || transactions.length === 0) {
+            container.html('<tr><td colspan="5" class="no-data">No recent transactions found</td></tr>');
             return;
         }
 
@@ -78,63 +133,69 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
     }
 
     createTransactionRow(transaction) {
+        // Use currency from transaction data or fallback to cached currency
+        const currency = transaction.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const formattedAmount = isoft_customer_portal.utils.formatCurrency(transaction.amount, currency);
+        const formattedDate = isoft_customer_portal.utils.formatDate(transaction.date);
         const statusClass = this.getStatusClass(transaction.status);
-        const formattedAmount = frappe.format_currency(transaction.amount);
-        const formattedDate = frappe.format_date(transaction.date);
 
         return `
-            <div class="transaction-row" data-type="${transaction.type}" data-reference="${transaction.reference}">
-                <div class="transaction-info">
-                    <div class="transaction-type">
-                        <i class="fas ${this.getTransactionIcon(transaction.type)}"></i>
-                        ${transaction.type}
-                    </div>
-                    <div class="transaction-reference">${transaction.reference}</div>
-                </div>
-                <div class="transaction-details">
-                    <div class="transaction-amount">${formattedAmount}</div>
-                    <div class="transaction-date">${formattedDate}</div>
-                    <div class="transaction-status ${statusClass}">${transaction.status}</div>
-                </div>
-            </div>
+            <tr>
+                <td><strong>${transaction.type}</strong></td>
+                <td>${transaction.reference}</td>
+                <td><strong>${formattedAmount}</strong></td>
+                <td>${formattedDate}</td>
+                <td><span class="status-badge ${statusClass}">${transaction.status}</span></td>
+            </tr>
         `;
     }
 
     getTransactionIcon(type) {
-        const icons = {
+        const iconMap = {
             'Sales Invoice': 'fa-file-invoice-dollar',
             'Quotation': 'fa-file-contract',
             'Sales Order': 'fa-shopping-cart',
-            'Delivery Note': 'fa-truck'
+            'Delivery Note': 'fa-truck',
+            'Payment Entry': 'fa-credit-card',
+            'Journal Entry': 'fa-book'
         };
-        return icons[type] || 'fa-file';
+        return iconMap[type] || 'fa-file';
     }
 
     getStatusClass(status) {
         const statusMap = {
-            'Draft': 'status-draft',
-            'Submitted': 'status-submitted',
-            'Paid': 'status-paid',
-            'Overdue': 'status-overdue',
-            'Cancelled': 'status-cancelled',
-            'Delivered': 'status-delivered',
-            'To Deliver': 'status-to-deliver'
+            'Draft': 'draft',
+            'Submitted': 'submitted',
+            'Paid': 'paid',
+            'Overdue': 'overdue',
+            'Cancelled': 'cancelled',
+            'Open': 'open',
+            'Replied': 'replied',
+            'Ordered': 'ordered',
+            'Lost': 'lost',
+            'Expired': 'expired',
+            'To Deliver': 'to-deliver',
+            'To Bill': 'to-bill',
+            'Completed': 'completed',
+            'Closed': 'closed'
         };
-        return statusMap[status] || 'status-default';
+        return statusMap[status] || 'default';
     }
 
     viewTransaction(type, reference) {
-        // Navigate to the appropriate page based on transaction type
-        const pageMap = {
-            'Sales Invoice': 'customer-invoices',
-            'Quotation': 'customer-quotations',
-            'Sales Order': 'customer-sales-orders',
-            'Delivery Note': 'customer-delivery-notes'
+        // Open transaction in new window/tab
+        const urlMap = {
+            'Sales Invoice': `/app/sales-invoice/${reference}`,
+            'Quotation': `/app/quotation/${reference}`,
+            'Sales Order': `/app/sales-order/${reference}`,
+            'Delivery Note': `/app/delivery-note/${reference}`,
+            'Payment Entry': `/app/payment-entry/${reference}`,
+            'Journal Entry': `/app/journal-entry/${reference}`
         };
-
-        const page = pageMap[type];
-        if (page) {
-            window.location.href = `/${page}?reference=${reference}`;
+        
+        const url = urlMap[type];
+        if (url) {
+            window.open(url, '_blank');
         }
     }
 
@@ -142,14 +203,10 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
         frappe.call({
             method: 'isoft_customer_portal.api.export_dashboard_excel',
             callback: (r) => {
-                if (r.message) {
-                    // Create and download the Excel file
-                    const link = document.createElement('a');
-                    link.href = r.message;
-                    link.download = 'customer_dashboard.xlsx';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                if (r.message && r.message.file_url) {
+                    window.open(r.message.file_url, '_blank');
+                } else {
+                    isoft_customer_portal.utils.showError('Error exporting to Excel');
                 }
             }
         });
@@ -159,31 +216,74 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
         frappe.call({
             method: 'isoft_customer_portal.api.export_dashboard_pdf',
             callback: (r) => {
-                if (r.message) {
-                    // Open PDF in new window
-                    window.open(r.message, '_blank');
+                if (r.message && r.message.file_url) {
+                    window.open(r.message.file_url, '_blank');
+                } else {
+                    isoft_customer_portal.utils.showError('Error exporting to PDF');
                 }
             }
         });
     }
 
     showLoading() {
-        $('.dashboard-content').addClass('loading');
+        // Enhanced loading state with animation
+        $('.summary-card .summary-value').addClass('loading-shimmer');
+        $('#recent-transactions').html(`
+            <tr>
+                <td colspan="5" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> 
+                    <span>Loading latest data...</span>
+                </td>
+            </tr>
+        `);
     }
 
     hideLoading() {
-        $('.dashboard-content').removeClass('loading');
+        $('.summary-card .summary-value').removeClass('loading-shimmer');
     }
-
-    setupAutoRefresh() {
-        // Auto refresh every 5 minutes
-        setInterval(() => {
-            this.loadDashboardData();
-        }, 5 * 60 * 1000);
+    
+    initializeCharts() {
+        // Initialize dashboard charts if Chart.js is available
+        if (typeof Chart !== 'undefined') {
+            // Initialize charts after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                if (document.getElementById('revenueChart') || document.getElementById('statusChart')) {
+                    window.dashboardCharts = new DashboardCharts();
+                }
+            }, 500);
+        } else {
+            console.warn('Chart.js not loaded. Charts will not be displayed.');
+        }
+    }
+    
+    refreshData() {
+        this.loadDashboardData();
+        // Refresh charts if they exist
+        if (window.dashboardCharts) {
+            window.dashboardCharts.refresh();
+        } else {
+            // Reinitialize charts if they don't exist
+            this.initializeCharts();
+        }
     }
 };
 
-// Initialize dashboard when page loads
-$(document).ready(() => {
+// Initialize dashboard when Frappe is available
+function initializeDashboard() {
     new isoft_customer_portal.CustomerDashboard();
-}); 
+}
+
+// Wait for Frappe to be available
+if (typeof frappe !== 'undefined' && frappe.session) {
+    initializeDashboard();
+} else {
+    // Wait for Frappe to load
+    $(document).ready(function() {
+        const checkFrappe = setInterval(function() {
+            if (typeof frappe !== 'undefined' && frappe.session) {
+                clearInterval(checkFrappe);
+                initializeDashboard();
+            }
+        }, 100);
+    });
+} 

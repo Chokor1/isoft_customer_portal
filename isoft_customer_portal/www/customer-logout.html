@@ -1,0 +1,166 @@
+{% extends "templates/base_portal.html" %}
+
+{% block title %}Logged Out - Isoft Customer Portal{% endblock %}
+
+{% block page_content %}
+<div class="logout-container">
+    <div class="logout-card">
+        <div class="logout-header">
+            <i class="fas fa-check-circle success-icon"></i>
+            <h1>Successfully Logged Out</h1>
+            <p>You have been successfully logged out of your account.</p>
+        </div>
+        
+        <div class="logout-actions">
+            <a href="/customer-login" class="login-link-btn">
+                <i class="fas fa-sign-in-alt"></i> Sign In Again
+            </a>
+        </div>
+        
+        <div class="logout-footer">
+            <p>Thank you for using the Customer Portal</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logout-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+    }
+    
+    .logout-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .logout-header {
+        margin-bottom: 2rem;
+    }
+    
+    .success-icon {
+        font-size: 4rem;
+        color: #10B981;
+        margin-bottom: 1rem;
+    }
+    
+    .logout-header h1 {
+        color: #3B82F6;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .logout-header p {
+        color: #64748B;
+        font-size: 1rem;
+    }
+    
+    .logout-actions {
+        margin-bottom: 2rem;
+    }
+    
+    .login-link-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 2rem;
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .login-link-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .logout-footer {
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 480px) {
+        .logout-card {
+            padding: 2rem;
+            margin: 1rem;
+        }
+        
+        .logout-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .success-icon {
+            font-size: 3rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Perform client-side cleanup
+    performClientSideCleanup();
+    
+    // Set up auto-redirect to login page
+    setTimeout(function() {
+        window.location.href = '/customer-login';
+    }, 3000);
+});
+
+function performClientSideCleanup() {
+    // Clear any client-side data
+    if (typeof frappe !== 'undefined' && frappe.session) {
+        try {
+            if (typeof frappe.session.clear === 'function') {
+                frappe.session.clear();
+            }
+        } catch (e) {
+            // Session clear failed, continue with other cleanup
+        }
+    }
+    
+    // Clear browser storage
+    try {
+        localStorage.removeItem('customer_data');
+        sessionStorage.clear();
+    } catch (e) {
+        // Storage clear failed, continue
+    }
+    
+    // Additional Frappe cleanup if available
+    if (typeof frappe !== 'undefined') {
+        try {
+            if (frappe.cache) {
+                frappe.cache.clear();
+            }
+            if (frappe.user) {
+                frappe.user = null;
+            }
+        } catch (e) {
+            // Frappe cleanup failed, continue
+        }
+    }
+}
+</script>
+{% endblock %} 

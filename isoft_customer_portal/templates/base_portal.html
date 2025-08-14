@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Customer Portal - Isoft Customer Portal{% endblock %}</title>
+    
+    <!-- Frappe CSS -->
+    <link rel="stylesheet" href="/assets/css/frappe-web-b4.css">
+    
+    <!-- Customer Portal CSS -->
+    <link rel="stylesheet" href="/assets/css/isoft_customer_portal.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for Modern Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Dashboard Charts -->
+    <script src="/assets/js/dashboard_charts.js"></script>
+    
+    <!-- Sidebar Navigation -->
+    <script src="/assets/js/sidebar_navigation.js"></script>
+    
+    <style>
+        /* Cool Grey Blue Theme Base Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 50%, #CBD5E1 100%);
+            line-height: 1.6;
+            color: #1E293B;
+            font-size: 16px;
+        }
+        
+        .page-wrapper {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 50%, #CBD5E1 100%);
+        }
+        
+        .customer-portal-container {
+            width: 100%;
+            margin: 0 auto;
+            padding: 0;
+            font-size: 1rem;
+        }
+        
+        .main-content .container {
+            max-width: 1400px;
+            padding: 2rem;
+            margin: 0 auto;
+        }
+        
+        /* Responsive Container */
+        @media (max-width: 1200px) {
+            .main-content .container {
+                max-width: 100%;
+                padding: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content .container {
+                padding: 1rem;
+            }
+        }
+        
+        /* Override any conflicting Frappe styles - Specific to portal elements */
+        .customer-portal-container .summary-card,
+        .customer-portal-container .data-section,
+        .customer-portal-container .portal-header,
+        .customer-portal-container .portal-nav,
+        .customer-portal-container .filter-row,
+        .customer-portal-container .data-table,
+        .customer-portal-container .pagination {
+            box-sizing: border-box;
+        }
+        
+        /* Improved Typography */
+        .customer-portal-container h1,
+        .customer-portal-container h2,
+        .customer-portal-container h3,
+        .customer-portal-container h4,
+        .customer-portal-container h5,
+        .customer-portal-container h6 {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #3B82F6;
+            margin: 0 0 0.5rem 0;
+            padding: 0;
+        }
+        
+        .customer-portal-container p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            color: #64748B;
+        }
+        
+        /* Enhanced Focus States - Specific to portal elements */
+        .customer-portal-container .summary-card:focus,
+        .customer-portal-container .portal-nav .nav-item a:focus,
+        .customer-portal-container .export-btn:focus,
+        .customer-portal-container .pagination button:focus,
+        .customer-portal-container .refresh-btn:focus,
+        .customer-portal-container .print-btn:focus,
+        .customer-portal-container .filter-input:focus,
+        .customer-portal-container .filter-group select:focus,
+        .customer-portal-container .filter-group input:focus {
+            outline: 2px solid #3B82F6;
+            outline-offset: 2px;
+        }
+        
+        .customer-portal-container p {
+            margin: 0;
+        }
+        
+        .customer-portal-container a {
+            text-decoration: none;
+        }
+        
+        .customer-portal-container button {
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        
+        .customer-portal-container input,
+        .customer-portal-container select,
+        .customer-portal-container textarea {
+            font-family: inherit;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Initialize Frappe -->
+    <script>
+        window.frappe = {};
+        frappe.ready_events = [];
+        frappe.ready = function(fn) {
+            frappe.ready_events.push(fn);
+        }
+        window.dev_server = false;
+        window.socketio_port = null;
+        window.show_language_picker = false;
+        
+        // Initialize session user
+        frappe.session = {
+            user: '{{ frappe.session.user or "Guest" }}'
+        };
+        
+        // Initialize CSRF token
+        frappe.csrf_token = '{{ frappe.session.csrf_token }}';
+        
+        // Initialize defaults
+        frappe.defaults = {
+            get_default: function(key) {
+                // Simple fallback for defaults
+                return null;
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="customer-portal-container">
+            <!-- Include Portal Header -->
+            {% include "templates/includes/portal_header.html" %}
+            
+            <!-- Modern Sidebar Navigation -->
+            {% include "templates/includes/portal_navigation.html" %}
+            
+            <!-- Legacy Navigation (hidden by default) -->
+            <div id="portal-navigation" style="display: none;">
+                <!-- Legacy navigation content -->
+            </div>
+            
+            <!-- Page Content -->
+            {% block page_content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Frappe Scripts -->
+    <script type="text/javascript" src="/assets/frappe/js/lib/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="/assets/js/libs.min.js"></script>
+    <script type="text/javascript" src="/assets/js/frappe-web.min.js"></script>
+    <script type="text/javascript" src="/assets/js/bootstrap-4-web.min.js"></script>
+    
+    <!-- Frappe Boot -->
+    <script>
+        frappe.boot = {
+            sysdefaults: {
+                float_precision: 3,
+                date_format: "yyyy-mm-dd",
+            }
+        };
+        frappe.sys_defaults = frappe.boot.sysdefaults;
+        
+        // Initialize defaults properly
+        frappe.defaults = {
+            get_default: function(key) {
+                if (frappe.boot && frappe.boot.user && frappe.boot.user.defaults) {
+                    return frappe.boot.user.defaults[key];
+                }
+                if (frappe.sys_defaults && frappe.sys_defaults[key]) {
+                    return frappe.sys_defaults[key];
+                }
+                return null;
+            },
+            get_user_default: function(key) {
+                if (frappe.boot && frappe.boot.user && frappe.boot.user.defaults) {
+                    return frappe.boot.user.defaults[key];
+                }
+                return null;
+            }
+        };
+        
+        // Execute ready events
+        $(document).ready(function() {
+            frappe.ready_events.forEach(function(fn) {
+                fn();
+            });
+        });
+    </script>
+    
+    <!-- Customer Portal JS -->
+    <script src="/assets/js/isoft_customer_portal.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Portal Navigation Logic -->
+    <script>
+        $(document).ready(function() {
+            // Set active navigation based on current page
+            const currentPath = window.location.pathname;
+            const navItems = {
+                '/customer-dashboard': '#nav-dashboard',
+                '/customer-ledger': '#nav-ledger',
+                '/customer-invoices': '#nav-invoices',
+                '/customer-quotations': '#nav-quotations',
+                '/customer-sales-orders': '#nav-sales-orders',
+                '/customer-delivery-notes': '#nav-delivery-notes',
+                '/customer-payment-entries': '#nav-payment-entries'
+            };
+            
+            // Remove all active classes
+            $('.nav-item').removeClass('active');
+            
+            // Add active class to current page
+            if (navItems[currentPath]) {
+                $(navItems[currentPath]).addClass('active');
+            }
+            
+            // Update welcome text with user name
+            if (frappe.session.user && frappe.session.user !== 'Guest') {
+                frappe.call({
+                    method: 'frappe.client.get_value',
+                    args: {
+                        doctype: 'User',
+                        filters: { name: frappe.session.user },
+                        fieldname: 'full_name'
+                    },
+                    callback: function(r) {
+                        if (r.message && r.message.full_name) {
+                            $('#welcome-text').text('Welcome, ' + r.message.full_name);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <!-- Page Initialization - After jQuery is loaded -->
+    {% block page_init %}{% endblock %}
+</body>
+</html> 

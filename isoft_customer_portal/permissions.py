@@ -1,153 +1,27 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import frappe
-from frappe import _
 
-def get_sales_invoice_permission_query_conditions(user):
-    """Get permission query conditions for Sales Invoice"""
+def has_customer_permission(doc, ptype, user):
+    """Check if user has permission to access customer documents"""
     if not user:
-        user = frappe.session.user
+        return False
     
-    if "System Manager" in frappe.get_roles(user):
-        return ""
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer:
-            return f"`tabSales Invoice`.customer = '{customer}'"
-    
-    return "1=0"
-
-def has_sales_invoice_permission(user, ptype, share, doctype, docname, doc=None):
-    """Check if user has permission for Sales Invoice"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
+    # Allow system managers and administrators
+    if frappe.has_permission(doc.doctype, ptype, user=user):
         return True
     
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer and doc:
-            return doc.customer == customer
+    # Check if user is linked to a customer
+    customer = get_customer_from_user(user)
+    if not customer:
+        return False
     
-    return False
-
-def get_quotation_permission_query_conditions(user):
-    """Get permission query conditions for Quotation"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return ""
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer:
-            return f"`tabQuotation`.party_name = '{customer}'"
-    
-    return "1=0"
-
-def has_quotation_permission(user, ptype, share, doctype, docname, doc=None):
-    """Check if user has permission for Quotation"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
+    # For customer documents, check if the customer matches
+    if hasattr(doc, 'customer') and doc.customer == customer:
         return True
     
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer and doc:
-            return doc.party_name == customer
-    
-    return False
-
-def get_delivery_note_permission_query_conditions(user):
-    """Get permission query conditions for Delivery Note"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return ""
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer:
-            return f"`tabDelivery Note`.customer = '{customer}'"
-    
-    return "1=0"
-
-def has_delivery_note_permission(user, ptype, share, doctype, docname, doc=None):
-    """Check if user has permission for Delivery Note"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
+    if hasattr(doc, 'party_name') and doc.party_name == customer:
         return True
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer and doc:
-            return doc.customer == customer
-    
-    return False
-
-def get_sales_order_permission_query_conditions(user):
-    """Get permission query conditions for Sales Order"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return ""
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer:
-            return f"`tabSales Order`.customer = '{customer}'"
-    
-    return "1=0"
-
-def has_sales_order_permission(user, ptype, share, doctype, docname, doc=None):
-    """Check if user has permission for Sales Order"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return True
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer and doc:
-            return doc.customer == customer
-    
-    return False
-
-def get_gl_entry_permission_query_conditions(user):
-    """Get permission query conditions for GL Entry"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return ""
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer:
-            return f"`tabGL Entry`.party = '{customer}'"
-    
-    return "1=0"
-
-def has_gl_entry_permission(user, ptype, share, doctype, docname, doc=None):
-    """Check if user has permission for GL Entry"""
-    if not user:
-        user = frappe.session.user
-    
-    if "System Manager" in frappe.get_roles(user):
-        return True
-    
-    if "Customer" in frappe.get_roles(user):
-        customer = get_customer_from_user(user)
-        if customer and doc:
-            return doc.party == customer
     
     return False
 
@@ -156,14 +30,16 @@ def get_customer_from_user(user=None):
     if not user:
         user = frappe.session.user
     
-    try:
-        # Get customer linked to user
-        customer = frappe.db.get_value("Customer", {"user": user})
-        if not customer:
-            # Try to get customer by email
-            customer = frappe.db.get_value("Customer", {"email_id": frappe.get_value("User", user, "email")})
-        
+    # Check if user is a customer
+    customer = frappe.db.get_value("Customer", {"user": user})
+    if customer:
         return customer
-    except Exception as e:
-        frappe.log_error(f"Error in get_customer_from_user: {str(e)}")
-        return None 
+    
+    # Check if user is linked to a customer via Contact
+    contact = frappe.db.get_value("Contact", {"user": user})
+    if contact:
+        customer = frappe.db.get_value("Contact", contact, "customer")
+        if customer:
+            return customer
+    
+    return None 

@@ -4,14 +4,17 @@ frappe.provide('isoft_customer_portal');
 isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
     constructor() {
         this.currentPage = 1;
-        this.pageLength = 20;
+        this.pageLength = 10;
         this.filters = {};
         this.init();
     }
 
     init() {
+        // Initialize currency first, then load data
+        isoft_customer_portal.utils.getDefaultCurrency().then(() => {
+            this.loadDeliveryNotesData();
+        });
         this.bindEvents();
-        this.loadDeliveryNotesData();
     }
 
     bindEvents() {
@@ -39,11 +42,7 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
         // Refresh button
         $('.refresh-btn').on('click', () => this.loadDeliveryNotesData());
 
-        // Delivery note row clicks
-        $(document).on('click', '.delivery-note-row', (e) => {
-            const deliveryNoteName = $(e.currentTarget).data('delivery-note');
-            this.viewDeliveryNote(deliveryNoteName);
-        });
+        // Removed row click handler - no longer redirects to document
     }
 
     applyFilters() {
@@ -87,7 +86,7 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
     }
 
     updateDeliveryNotesTable(data) {
-        const container = $('#delivery-notes-table tbody');
+        const container = $('#delivery-notes-list');
         container.empty();
 
         if (data.delivery_notes && data.delivery_notes.length > 0) {
@@ -96,7 +95,7 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
                 container.append(row);
             });
         } else {
-            container.html('<tr><td colspan="9" class="text-center">No delivery notes found</td></tr>');
+            container.html('<tr><td colspan="6" class="text-center">No delivery notes found</td></tr>');
         }
 
         this.updatePagination(data);
@@ -104,25 +103,23 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
     }
 
     createDeliveryNoteRow(deliveryNote) {
-        const formattedDate = frappe.format_date(deliveryNote.posting_date);
-        const formattedAmount = frappe.format_currency(deliveryNote.grand_total);
-        const formattedDeliveryDate = deliveryNote.delivery_date ? frappe.format_date(deliveryNote.delivery_date) : '-';
+        // Use currency from delivery note data or fallback to cached currency
+        const currency = deliveryNote.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        
+        const formattedDate = isoft_customer_portal.utils.formatDate(deliveryNote.posting_date);
+        const formattedAmount = isoft_customer_portal.utils.formatCurrency(deliveryNote.grand_total, currency);
         const statusClass = this.getStatusClass(deliveryNote.status);
-        const deliveryTypeClass = this.getDeliveryTypeClass(deliveryNote.delivery_type);
 
         return `
             <tr class="delivery-note-row" data-delivery-note="${deliveryNote.name}">
-                <td>${deliveryNote.name}</td>
+                <td><strong>${deliveryNote.name}</strong></td>
                 <td>${formattedDate}</td>
-                <td>${deliveryNote.customer_name || ''}</td>
-                <td class="text-right">${formattedAmount}</td>
-                <td><span class="status-badge ${statusClass}">${deliveryNote.status || 'Draft'}</span></td>
-                <td><span class="status-badge ${deliveryTypeClass}">${deliveryNote.delivery_type || 'Customer'}</span></td>
-                <td>${formattedDeliveryDate}</td>
-                <td>${deliveryNote.per_billed || 0}%</td>
+                <td>${deliveryNote.customer || ''}</td>
+                <td><strong>${formattedAmount}</strong></td>
+                <td><span class="status-badge ${statusClass}">${deliveryNote.status || 'To Bill'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary view-delivery-note-btn" data-delivery-note="${deliveryNote.name}">
-                        <i class="fas fa-eye"></i> View
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Delivery Note', '${deliveryNote.name}')" title="Print Delivery Note">
+                        <i class="fas fa-print"></i>
                     </button>
                 </td>
             </tr>
@@ -131,7 +128,6 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
 
     getStatusClass(status) {
         const statusMap = {
-            'Draft': 'status-draft',
             'To Bill': 'status-to-bill',
             'Completed': 'status-completed',
             'Cancelled': 'status-cancelled',
@@ -151,48 +147,26 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
     }
 
     updatePagination(data) {
-        const pagination = $('.pagination');
-        pagination.empty();
-
-        if (data.total_pages <= 1) {
-            return;
-        }
-
-        // Previous button
-        if (this.currentPage > 1) {
-            pagination.append(`
-                <button class="pagination-btn" data-page="${this.currentPage - 1}">
-                    <i class="fas fa-chevron-left"></i> Previous
-                </button>
-            `);
-        }
-
-        // Page numbers
-        const startPage = Math.max(1, this.currentPage - 2);
-        const endPage = Math.min(data.total_pages, this.currentPage + 2);
-
-        for (let i = startPage; i <= endPage; i++) {
-            const activeClass = i === this.currentPage ? 'active' : '';
-            pagination.append(`
-                <button class="pagination-btn ${activeClass}" data-page="${i}">${i}</button>
-            `);
-        }
-
-        // Next button
-        if (this.currentPage < data.total_pages) {
-            pagination.append(`
-                <button class="pagination-btn" data-page="${this.currentPage + 1}">
-                    Next <i class="fas fa-chevron-right"></i>
-                </button>
-            `);
-        }
+        const pageLength = 10;
+        this.totalPages = Math.ceil(data.total / pageLength);
+        
+        $('#page-info').text(`${((this.currentPage - 1) * pageLength) + 1} to ${Math.min(this.currentPage * pageLength, data.total)}`);
+        $('#total-entries').text(data.total);
+        $('#current-page').text(this.currentPage);
+        $('#total-pages').text(this.totalPages);
+        
+        $('#prev-page').prop('disabled', this.currentPage <= 1);
+        $('#next-page').prop('disabled', this.currentPage >= this.totalPages);
     }
 
     updateSummary(summary) {
         if (summary) {
-            $('#total-delivery-notes').text(summary.total_delivery_notes || 0);
-            $('#total-amount').text(frappe.format_currency(summary.total_amount || 0));
-            $('#pending-billing').text(summary.pending_billing || 0);
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+            
+            $('#total-deliveries').text(summary.total_deliveries || 0);
+            $('#draft-deliveries').text(summary.draft_deliveries || 0);
+            $('#submitted-deliveries').text(summary.submitted_deliveries || 0);
+            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
         }
     }
 

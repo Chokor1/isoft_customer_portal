@@ -1,0 +1,76 @@
+{% extends "templates/base_portal.html" %}
+
+{% block title %}Authentication Check - Isoft Customer Portal{% endblock %}
+
+{% block page_content %}
+<div class="auth-check-container">
+    <div class="auth-check-card">
+        <div class="auth-check-header">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h1>Checking Authentication...</h1>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-check-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+    }
+    
+    .auth-check-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .auth-check-header i {
+        font-size: 3rem;
+        color: #3B82F6;
+        margin-bottom: 1rem;
+    }
+    
+    .auth-check-header h1 {
+        color: #3B82F6;
+        font-size: 1.5rem;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Check authentication status
+    frappe.call({
+        method: 'isoft_customer_portal.api.check_customer_auth',
+        callback: function(r) {
+            if (r.message && r.message.authenticated) {
+                // User is authenticated, redirect to dashboard
+                window.location.href = '/customer-dashboard';
+            } else {
+                // User is not authenticated, redirect to login
+                window.location.href = '/customer-login';
+            }
+        },
+        error: function() {
+            // Error occurred, redirect to login
+            window.location.href = '/customer-login';
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,305 @@
+{% extends "templates/base_portal.html" %}
+
+{% block title %}Customer Login - Isoft Customer Portal{% endblock %}
+
+{% block page_content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h1 class="login-portal-title">
+            <div class="login-icon-wrapper">
+                <i class="fas fa-store"></i>
+                <div class="login-icon-glow"></div>
+            </div>
+            <div class="login-text-wrapper">
+                <span class="login-text">Customer</span>
+                <span class="login-text-accent">Portal</span>
+            </div>
+        </h1>
+            <p>Sign in to access your account</p>
+        </div>
+        
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="username">Email/Username</label>
+                <input type="text" id="username" name="username" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </div>
+            
+            <div id="login-error" class="error-message" style="display: none;"></div>
+        </form>
+        
+        <div class="login-footer">
+            <p>Don't have an account? Contact your administrator.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hide navigation and user section on login page */
+    #portal-navigation,
+    #user-section {
+        display: none !important;
+    }
+    
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+    }
+    
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 400px;
+        width: 100%;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .login-header h1 {
+        color: #3B82F6;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .login-header p {
+        color: #64748B;
+        font-size: 1rem;
+    }
+    
+    .login-form {
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid #E5E7EB;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.9);
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        transform: translateY(-1px);
+    }
+    
+    /* Prevent filter-btn conflicts with login button */
+    .login-container .login-btn {
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.5rem !important;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        font-family: inherit !important;
+        line-height: 1.5 !important;
+        width: 100% !important;
+        padding: 1rem !important;
+    }
+    
+    .login-container .login-btn:hover {
+        background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+    
+    .login-container .login-btn:active {
+        transform: translateY(0) !important;
+    }
+    
+    .login-container .login-btn:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    }
+    
+    .login-container .login-btn:disabled {
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+    }
+    
+    /* Additional overrides to ensure button styles are applied */
+    .login-container button,
+    .login-container input[type="submit"],
+    .login-container .btn {
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.5rem !important;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        font-family: inherit !important;
+        line-height: 1.5 !important;
+        width: 100% !important;
+        padding: 1rem !important;
+    }
+    
+    .login-container button:hover,
+    .login-container input[type="submit"]:hover,
+    .login-container .btn:hover {
+        background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+    
+    /* Override any Frappe button styles */
+    .login-container .btn-primary,
+    .login-container .btn-default,
+    .login-container .btn-success {
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+    
+    .login-container .btn-primary:hover,
+    .login-container .btn-default:hover,
+    .login-container .btn-success:hover {
+        background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%) !important;
+        color: white !important;
+    }
+    
+    .error-message {
+        background: #FEE2E2;
+        color: #DC2626;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #FECACA;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .login-footer {
+        text-align: center;
+        color: #6B7280;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 480px) {
+        .login-card {
+            padding: 2rem;
+            margin: 1rem;
+        }
+        
+        .login-header h1 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Hide navigation and user section on login page
+    document.getElementById('portal-navigation').style.display = 'none';
+    document.getElementById('user-section').style.display = 'none';
+    
+    $('#login-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const username = $('#username').val();
+        const password = $('#password').val();
+        
+        // Clear previous errors
+        $('#login-error').hide();
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Signing In...');
+        submitBtn.prop('disabled', true);
+        
+        // Call Frappe login API
+        frappe.call({
+            method: 'isoft_customer_portal.api.customer_login',
+            args: {
+                usr: username,
+                pwd: password
+            },
+            callback: function(r) {
+                if (r.message && r.message.success) {
+                    // Success - redirect to dashboard
+                    window.location.href = '/customer-dashboard';
+                } else {
+                    // Show error
+                    const errorMsg = r.message ? r.message.message : 'Login failed. Please try again.';
+                    $('#login-error').text(errorMsg).show();
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#login-error').text('Login failed. Please try again.').show();
+                submitBtn.html(originalText);
+                submitBtn.prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

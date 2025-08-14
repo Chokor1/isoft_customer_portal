@@ -1,129 +1,70 @@
-{% extends "templates/web.html" %}
+{% extends "templates/base_portal.html" %}
+
+{% block title %}Customer Quotations - Isoft Customer Portal{% endblock %}
 
 {% block page_content %}
-<div class="customer-portal-container">
-    <!-- Header -->
-    <div class="portal-header">
-        <div class="header-content">
-            <h1 class="portal-title">
-                <i class="fas fa-file-contract"></i>
-                My Quotations
-            </h1>
-            <div class="user-info">
-                <span class="welcome-text">Welcome, {{ frappe.get_user().full_name }}</span>
-                <a href="/api/method/frappe.auth.logout" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="portal-nav">
-        <div class="nav-container">
-            <a href="/customer-dashboard" class="nav-item">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="/customer-ledger" class="nav-item">
-                <i class="fas fa-book"></i>
-                <span>Ledger</span>
-            </a>
-            <a href="/customer-invoices" class="nav-item">
-                <i class="fas fa-file-invoice"></i>
-                <span>Invoices</span>
-            </a>
-            <a href="/customer-quotations" class="nav-item active">
-                <i class="fas fa-file-contract"></i>
-                <span>Quotations</span>
-            </a>
-            <a href="/customer-sales-orders" class="nav-item">
-                <i class="fas fa-shopping-cart"></i>
-                <span>Sales Orders</span>
-            </a>
-            <a href="/customer-delivery-notes" class="nav-item">
-                <i class="fas fa-truck"></i>
-                <span>Delivery Notes</span>
-            </a>
-        </div>
-    </nav>
-
-    <!-- Content -->
-    <div class="content-section">
-        <!-- Filters -->
-        <div class="filters-section">
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label for="from-date">From Date</label>
-                    <input type="date" id="from-date" class="filter-input">
-                </div>
-                <div class="filter-group">
-                    <label for="to-date">To Date</label>
-                    <input type="date" id="to-date" class="filter-input">
-                </div>
-                <div class="filter-group">
-                    <label for="status-filter">Status</label>
-                    <select id="status-filter" class="filter-input">
-                        <option value="">All Status</option>
-                        <option value="Draft">Draft</option>
-                        <option value="Open">Open</option>
-                        <option value="Replied">Replied</option>
-                        <option value="Ordered">Ordered</option>
-                        <option value="Lost">Lost</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="filter-actions">
-                    <button class="btn btn-primary" onclick="applyFilters()">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearFilters()">
-                        <i class="fas fa-times"></i> Clear
-                    </button>
-                </div>
-            </div>
-        </div>
-
+<!-- Quotations Content -->
+<div class="main-content">
+    <div class="container">
         <!-- Summary Cards -->
-        <div class="summary-cards">
+        <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-icon">
-                    <i class="fas fa-file-contract"></i>
-                </div>
-                <div class="summary-content">
-                    <h3 id="total-quotations">0</h3>
-                    <p>Total Quotations</p>
-                </div>
+                <div class="summary-value" id="total-quotations">0</div>
+                <div class="summary-label">Total Quotations</div>
             </div>
             <div class="summary-card">
-                <div class="summary-icon">
-                    <i class="fas fa-dollar-sign"></i>
-                </div>
-                <div class="summary-content">
-                    <h3 id="total-amount">$0</h3>
-                    <p>Total Amount</p>
-                </div>
+                <div class="summary-value" id="draft-quotations">0</div>
+                <div class="summary-label">Draft Quotations</div>
             </div>
             <div class="summary-card">
-                <div class="summary-icon">
-                    <i class="fas fa-calendar"></i>
-                </div>
-                <div class="summary-content">
-                    <h3 id="valid-quotations">0</h3>
-                    <p>Valid Quotations</p>
-                </div>
+                <div class="summary-value" id="submitted-quotations">0</div>
+                <div class="summary-label">Submitted Quotations</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="total-amount">0</div>
+                <div class="summary-label">Total Amount</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter" class="filter-input">
+                    <option value="">All Status</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Submitted">Submitted</option>
+                    <option value="Lost">Lost</option>
+                    <option value="Ordered">Ordered</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="from-date">From Date:</label>
+                <input type="date" id="from-date" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label for="to-date">To Date:</label>
+                <input type="date" id="to-date" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <button class="filter-btn" onclick="customerQuotations.applyFilters()">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
             </div>
         </div>
 
         <!-- Quotations Table -->
-        <div class="table-section">
-            <div class="table-header">
-                <h2>Quotation List</h2>
-                <div class="table-actions">
-                    <button class="btn btn-secondary" onclick="exportToExcel()">
+        <div class="data-section">
+            <div class="section-header">
+                <h2 class="section-title">Customer Quotations</h2>
+                <div class="section-actions">
+                    <button class="refresh-btn" title="Refresh" onclick="customerQuotations.refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="export-btn export-excel-btn">
                         <i class="fas fa-file-excel"></i> Export Excel
                     </button>
-                    <button class="btn btn-secondary" onclick="exportToPDF()">
+                    <button class="export-btn export-pdf-btn">
                         <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                 </div>
@@ -135,613 +76,40 @@
                         <tr>
                             <th>Quotation No</th>
                             <th>Date</th>
-                            <th>Valid Till</th>
+                            <th>Valid Until</th>
                             <th>Amount</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th>Print</th>
                         </tr>
                     </thead>
-                    <tbody id="quotations-tbody">
-                        <tr>
-                            <td colspan="6" class="loading">
-                                <i class="fas fa-spinner fa-spin"></i> Loading quotations...
-                            </td>
-                        </tr>
+                    <tbody id="quotations-list">
+                        <!-- Loading state will be handled by JavaScript -->
                     </tbody>
                 </table>
             </div>
-
+            
             <!-- Pagination -->
-            <div class="pagination-container">
-                <div class="pagination-info">
-                    <span id="pagination-info">Showing 0 of 0 results</span>
-                </div>
-                <div class="pagination-controls">
-                    <button class="btn btn-secondary" onclick="previousPage()" id="prev-btn" disabled>
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </button>
-                    <span id="page-info">Page 1</span>
-                    <button class="btn btn-secondary" onclick="nextPage()" id="next-btn" disabled>
-                        Next <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
+            <div class="pagination">
+                <button id="prev-page" onclick="customerQuotations.previousPage()">Previous</button>
+                <span class="page-info">
+                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                </span>
+                <button id="next-page" onclick="customerQuotations.nextPage()">Next</button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.customer-portal-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
+{% block extra_js %}
+<script src="/assets/js/customer_quotations.js"></script>
+{% endblock %}
 
-.portal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 30px;
-    border-radius: 15px;
-    margin-bottom: 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.portal-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.welcome-text {
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.logout-btn {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 25px;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.logout-btn:hover {
-    background: rgba(255,255,255,0.3);
-    transform: translateY(-2px);
-}
-
-.portal-nav {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-}
-
-.nav-container {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 15px 25px;
-    border-radius: 10px;
-    text-decoration: none;
-    color: #666;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    font-weight: 500;
-}
-
-.nav-item:hover, .nav-item.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.content-section {
-    background: white;
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-}
-
-.filters-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 10px;
-}
-
-.filter-row {
-    display: flex;
-    gap: 20px;
-    align-items: end;
-    flex-wrap: wrap;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 150px;
-}
-
-.filter-group label {
-    font-weight: 500;
-    color: #333;
-    font-size: 0.9rem;
-}
-
-.filter-input {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 0.9rem;
-}
-
-.filter-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-    background: #f8f9fa;
-    color: #666;
-    border: 1px solid #e9ecef;
-}
-
-.btn-secondary:hover {
-    background: #e9ecef;
-    transform: translateY(-2px);
-}
-
-.summary-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.summary-card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    border: 1px solid #e9ecef;
-}
-
-.summary-icon {
-    font-size: 2rem;
-    color: #667eea;
-}
-
-.summary-content h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 5px 0;
-}
-
-.summary-content p {
-    margin: 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.table-section {
-    margin-top: 30px;
-}
-
-.table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.table-header h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0;
-    color: #333;
-}
-
-.table-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.table-container {
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid #e9ecef;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th {
-    background: #f8f9fa;
-    padding: 15px;
-    text-align: left;
-    font-weight: 600;
-    color: #333;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.data-table td {
-    padding: 15px;
-    border-bottom: 1px solid #e9ecef;
-    vertical-align: middle;
-}
-
-.data-table tr:hover {
-    background: #f8f9fa;
-}
-
-.loading {
-    text-align: center;
-    color: #666;
-    padding: 40px;
-}
-
-.loading i {
-    font-size: 1.5rem;
-    margin-right: 10px;
-}
-
-.status-badge {
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-.status-badge.draft {
-    background: #e9ecef;
-    color: #666;
-}
-
-.status-badge.open {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-badge.replied {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-
-.status-badge.ordered {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-badge.lost {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.status-badge.cancelled {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.pagination-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-    padding: 20px 0;
-}
-
-.pagination-info {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.pagination-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.pagination-controls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#page-info {
-    font-weight: 500;
-    color: #333;
-}
-
-@media (max-width: 768px) {
-    .customer-portal-container {
-        padding: 10px;
-    }
-    
-    .portal-header {
-        padding: 20px;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-    }
-    
-    .portal-title {
-        font-size: 2rem;
-    }
-    
-    .nav-container {
-        flex-wrap: wrap;
-    }
-    
-    .filter-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .filter-actions {
-        justify-content: center;
-    }
-    
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .table-header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: stretch;
-    }
-    
-    .table-actions {
-        justify-content: center;
-    }
-    
-    .data-table {
-        font-size: 0.9rem;
-    }
-    
-    .data-table th,
-    .data-table td {
-        padding: 10px 5px;
-    }
-    
-    .pagination-container {
-        flex-direction: column;
-        gap: 15px;
-    }
-}
-</style>
-
+{% block page_init %}
 <script>
-let currentPage = 1;
-let totalPages = 1;
-let currentFilters = {};
-
-document.addEventListener('DOMContentLoaded', function() {
-    loadQuotations();
-    loadSummary();
-});
-
-function loadQuotations(page = 1) {
-    currentPage = page;
-    
-    const tbody = document.getElementById('quotations-tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading"><i class="fas fa-spinner fa-spin"></i> Loading quotations...</td></tr>';
-    
-    frappe.call({
-        method: 'isoft_customer_portal.api.get_customer_quotations',
-        args: {
-            filters: JSON.stringify(currentFilters),
-            page: page,
-            page_length: 20
-        },
-        callback: function(r) {
-            if (r.message) {
-                displayQuotations(r.message.quotations || []);
-                updatePagination(r.message.total || 0, page);
-                updateSummary(r.message.summary || {});
-            }
-        }
+    // Initialize Customer Quotations
+    $(document).ready(function() {
+        window.customerQuotations = new isoft_customer_portal.CustomerQuotations();
     });
-}
-
-function loadSummary() {
-    frappe.call({
-        method: 'isoft_customer_portal.api.get_customer_quotations',
-        args: {
-            filters: JSON.stringify({}),
-            page: 1,
-            page_length: 1
-        },
-        callback: function(r) {
-            if (r.message && r.message.summary) {
-                updateSummary(r.message.summary);
-            }
-        }
-    });
-}
-
-function displayQuotations(quotations) {
-    const tbody = document.getElementById('quotations-tbody');
-    
-    if (quotations.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No quotations found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = '';
-    
-    quotations.forEach(quotation => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><strong>${quotation.name}</strong></td>
-            <td>${formatDate(quotation.transaction_date)}</td>
-            <td>${formatDate(quotation.valid_till)}</td>
-            <td><strong>${formatCurrency(quotation.grand_total)}</strong></td>
-            <td><span class="status-badge ${(quotation.status || 'draft').toLowerCase()}">${quotation.status || 'Draft'}</span></td>
-            <td>
-                <button class="btn btn-secondary btn-sm" onclick="viewQuotation('${quotation.name}')">
-                    <i class="fas fa-eye"></i> View
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-function updatePagination(total, page) {
-    const pageLength = 20;
-    totalPages = Math.ceil(total / pageLength);
-    
-    document.getElementById('pagination-info').textContent = `Showing ${((page - 1) * pageLength) + 1} to ${Math.min(page * pageLength, total)} of ${total} results`;
-    document.getElementById('page-info').textContent = `Page ${page} of ${totalPages}`;
-    
-    document.getElementById('prev-btn').disabled = page <= 1;
-    document.getElementById('next-btn').disabled = page >= totalPages;
-}
-
-function updateSummary(summary) {
-    document.getElementById('total-amount').textContent = formatCurrency(summary.total_amount || 0);
-    // You can add more summary fields here
-}
-
-function applyFilters() {
-    const filters = {
-        from_date: document.getElementById('from-date').value,
-        to_date: document.getElementById('to-date').value,
-        status: document.getElementById('status-filter').value
-    };
-    
-    // Remove empty filters
-    Object.keys(filters).forEach(key => {
-        if (!filters[key]) delete filters[key];
-    });
-    
-    currentFilters = filters;
-    loadQuotations(1);
-}
-
-function clearFilters() {
-    document.getElementById('from-date').value = '';
-    document.getElementById('to-date').value = '';
-    document.getElementById('status-filter').value = '';
-    currentFilters = {};
-    loadQuotations(1);
-}
-
-function previousPage() {
-    if (currentPage > 1) {
-        loadQuotations(currentPage - 1);
-    }
-}
-
-function nextPage() {
-    if (currentPage < totalPages) {
-        loadQuotations(currentPage + 1);
-    }
-}
-
-function viewQuotation(quotationName) {
-    // Open quotation in new window/tab
-    window.open(`/app/quotation/${quotationName}`, '_blank');
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount || 0);
-}
-
-function exportToExcel() {
-    frappe.call({
-        method: 'isoft_customer_portal.api.export_dashboard_excel',
-        callback: function(r) {
-            if (r.message && r.message.file_url) {
-                window.open(r.message.file_url, '_blank');
-            } else {
-                frappe.msgprint('Error exporting to Excel');
-            }
-        }
-    });
-}
-
-function exportToPDF() {
-    frappe.call({
-        method: 'isoft_customer_portal.api.export_dashboard_pdf',
-        callback: function(r) {
-            if (r.message && r.message.file_url) {
-                window.open(r.message.file_url, '_blank');
-            } else {
-                frappe.msgprint('Error exporting to PDF');
-            }
-        }
-    });
-}
 </script>
 {% endblock %} 

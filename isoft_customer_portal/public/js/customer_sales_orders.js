@@ -4,14 +4,17 @@ frappe.provide('isoft_customer_portal');
 isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
     constructor() {
         this.currentPage = 1;
-        this.pageLength = 20;
+        this.pageLength = 10;
         this.filters = {};
         this.init();
     }
 
     init() {
+        // Initialize currency first, then load data
+        isoft_customer_portal.utils.getDefaultCurrency().then(() => {
+            this.loadSalesOrdersData();
+        });
         this.bindEvents();
-        this.loadSalesOrdersData();
     }
 
     bindEvents() {
@@ -39,11 +42,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
         // Refresh button
         $('.refresh-btn').on('click', () => this.loadSalesOrdersData());
 
-        // Sales order row clicks
-        $(document).on('click', '.sales-order-row', (e) => {
-            const salesOrderName = $(e.currentTarget).data('sales-order');
-            this.viewSalesOrder(salesOrderName);
-        });
+        // Removed row click handler - no longer redirects to document
     }
 
     applyFilters() {
@@ -87,7 +86,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
     }
 
     updateSalesOrdersTable(data) {
-        const container = $('#sales-orders-table tbody');
+        const container = $('#sales-orders-list');
         container.empty();
 
         if (data.sales_orders && data.sales_orders.length > 0) {
@@ -96,7 +95,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
                 container.append(row);
             });
         } else {
-            container.html('<tr><td colspan="9" class="text-center">No sales orders found</td></tr>');
+            container.html('<tr><td colspan="6" class="text-center">No sales orders found</td></tr>');
         }
 
         this.updatePagination(data);
@@ -104,25 +103,24 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
     }
 
     createSalesOrderRow(salesOrder) {
-        const formattedDate = frappe.format_date(salesOrder.transaction_date);
-        const formattedAmount = frappe.format_currency(salesOrder.grand_total);
-        const formattedDeliveryDate = salesOrder.delivery_date ? frappe.format_date(salesOrder.delivery_date) : '-';
+        // Use currency from sales order data or fallback to cached currency
+        const currency = salesOrder.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        
+        const formattedDate = isoft_customer_portal.utils.formatDate(salesOrder.transaction_date);
+        const formattedAmount = isoft_customer_portal.utils.formatCurrency(salesOrder.grand_total, currency);
+        const formattedDeliveryDate = salesOrder.delivery_date ? isoft_customer_portal.utils.formatDate(salesOrder.delivery_date) : '-';
         const statusClass = this.getStatusClass(salesOrder.status);
-        const deliveryStatusClass = this.getDeliveryStatusClass(salesOrder.delivery_status);
 
         return `
             <tr class="sales-order-row" data-sales-order="${salesOrder.name}">
-                <td>${salesOrder.name}</td>
+                <td><strong>${salesOrder.name}</strong></td>
                 <td>${formattedDate}</td>
-                <td>${salesOrder.customer_name || ''}</td>
-                <td class="text-right">${formattedAmount}</td>
-                <td><span class="status-badge ${statusClass}">${salesOrder.status || 'Draft'}</span></td>
-                <td><span class="status-badge ${deliveryStatusClass}">${salesOrder.delivery_status || 'Not Delivered'}</span></td>
                 <td>${formattedDeliveryDate}</td>
-                <td>${salesOrder.per_delivered || 0}%</td>
+                <td><strong>${formattedAmount}</strong></td>
+                <td><span class="status-badge ${statusClass}">${salesOrder.status || 'Draft'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary view-sales-order-btn" data-sales-order="${salesOrder.name}">
-                        <i class="fas fa-eye"></i> View
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Sales Order', '${salesOrder.name}')" title="Print Sales Order">
+                        <i class="fas fa-print"></i>
                     </button>
                 </td>
             </tr>
@@ -192,7 +190,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
     updateSummary(summary) {
         if (summary) {
             $('#total-sales-orders').text(summary.total_sales_orders || 0);
-            $('#total-amount').text(frappe.format_currency(summary.total_amount || 0));
+            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0));
             $('#pending-delivery').text(summary.pending_delivery || 0);
         }
     }

@@ -1,0 +1,294 @@
+<!-- Customer Portal Header -->
+<header class="portal-header">
+    <div class="container">
+        <div class="header-content">
+            <div class="header-left">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+            </div>
+            <div class="user-section" id="user-section" style="display: none;">
+                <button class="logout-btn" onclick="performCustomerLogout()" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<script>
+// Complete print implementation that doesn't depend on external files
+function printDocument(doctype, name) {
+    // Show loading indicator
+    if (typeof frappe !== 'undefined' && frappe.show_alert) {
+        frappe.show_alert('Preparing document for printing...', 2);
+    }
+    
+    // Call the print API
+    if (typeof frappe !== 'undefined' && frappe.call) {
+        frappe.call({
+            method: 'isoft_customer_portal.api.print_document',
+            args: {
+                doc_type: doctype,
+                doc_name: name
+            },
+            callback: (r) => {
+                if (r.message && r.message.print_format) {
+                    // Build print URL
+                    let baseUrl = window.location.origin;
+                    let printUrl = baseUrl + '/printview?' +
+                        'doctype=' + encodeURIComponent(doctype) +
+                        '&name=' + encodeURIComponent(name) +
+                        '&trigger_print=1' +
+                        '&format=' + encodeURIComponent(r.message.print_format) +
+                        '&no_letterhead=0';
+                    
+                    // Add language if available
+                    if (frappe.lang_code) {
+                        printUrl += '&_lang=' + frappe.lang_code;
+                    }
+                    
+                    let w = window.open(printUrl, '_blank');
+
+                    if (!w) {
+                        if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                            frappe.msgprint('Please enable pop-ups for printing.');
+                        } else {
+                            alert('Please enable pop-ups for printing.');
+                        }
+                        return;
+                    }
+                    
+                    // Show success message
+                    if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                        frappe.show_alert('Document opened for printing', 2);
+                    }
+                    
+                } else if (r.message && r.message.error) {
+                    showError(r.message.error);
+                } else {
+                    showError('Failed to get print format from settings');
+                }
+            },
+            error: (err) => {
+                showError('Failed to print document. Please try again.');
+            }
+        });
+    } else {
+        showError('Frappe framework not available. Please refresh the page.');
+    }
+}
+
+// Error display function
+function showError(message) {
+    if (typeof frappe !== 'undefined' && frappe.msgprint) {
+        frappe.msgprint(message);
+    } else {
+        alert(message);
+    }
+}
+
+// Global fallback function for any cached references to the old function
+window.printDocumentWithCustomURLDebug = function(doctype, name, format = null) {
+    // Redirect to the new print function
+    printDocument(doctype, name);
+};
+
+// Function to perform customer logout
+function performCustomerLogout() {
+    // Show loading state
+    const logoutBtn = document.querySelector('.logout-btn');
+    const originalText = logoutBtn.innerHTML;
+    logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Logging out...</span>';
+    logoutBtn.disabled = true;
+    
+    // Clear any client-side data immediately
+    if (typeof frappe !== 'undefined' && frappe.session) {
+        try {
+            if (typeof frappe.session.clear === 'function') {
+                frappe.session.clear();
+            }
+        } catch (e) {
+            //
+        }
+    }
+    
+    // Clear all stored data
+    try {
+        localStorage.removeItem('customer_data');
+        
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        sessionStorage.clear();
+    } catch (e) {
+        //
+    }
+    
+    // Clear any frappe-specific data
+    if (typeof frappe !== 'undefined') {
+        try {
+            // Clear any cached data
+            if (frappe.cache) {
+                frappe.cache.clear();
+            }
+            // Clear any stored user info
+            if (frappe.user) {
+                frappe.user = null;
+            }
+        } catch (e) {
+            //
+        }
+    }
+    
+    // Call the logout API in the background (don't wait for response)
+    $.ajax({
+        url: '/api/method/isoft_customer_portal.api.customer_logout',
+        type: 'POST',
+        dataType: 'json',
+        async: true // Make it asynchronous
+    });
+    
+    // Redirect to logout page immediately
+    setTimeout(function() {
+        window.location.href = '/customer-logout';
+    }, 500); // Small delay to ensure API call is sent
+}
+
+// Check authentication and show/hide elements accordingly
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on logout/login pages and hide sidebar
+    const currentPath = window.location.pathname;
+    
+    if (currentPath.includes('logout') || currentPath.includes('login')) {
+        // Hide sidebar on logout/login pages
+        const sidebar = document.getElementById('modernSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) {
+            sidebar.style.display = 'none';
+        }
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+        
+        // Hide sidebar toggle button
+        const toggleBtn = document.getElementById('sidebarToggle');
+        if (toggleBtn) {
+            toggleBtn.style.display = 'none';
+        }
+    }
+    
+    // Check if user is authenticated
+    frappe.call({
+        method: 'isoft_customer_portal.api.check_customer_auth',
+        callback: function(r) {
+            
+            if (r.message && r.message.authenticated) {
+                // User is authenticated - show user section
+                document.getElementById('user-section').style.display = 'flex';
+                
+                // Load customer name
+                frappe.call({
+                    method: 'isoft_customer_portal.api.get_customer_name',
+                    callback: function(r) {
+                        if (r.message) {
+                            document.getElementById('customer-name').textContent = r.message;
+                        }
+                    },
+                    error: function(r) {
+                        //
+                    }
+                });
+            } else {
+                // User is not authenticated - hide user section and redirect to login if on protected page
+                document.getElementById('user-section').style.display = 'none';
+                
+                // Check if we're on a protected page and redirect to login
+                const currentPath = window.location.pathname;
+                const protectedPages = ['/customer-dashboard', '/customer-invoices', '/customer-ledger', 
+                                     '/customer-quotations', '/customer-sales-orders', '/customer-delivery-notes', 
+                                     '/customer-payment-entries'];
+                
+                if (protectedPages.some(page => currentPath.includes(page))) {
+                    window.location.href = '/customer-login';
+                }
+            }
+        },
+        error: function(r) {
+            // Error occurred - hide user section
+            document.getElementById('user-section').style.display = 'none';
+        }
+    });
+});
+
+
+</script>
+
+<style>
+.portal-header .user-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+}
+
+.logout-btn i {
+    font-size: 0.875rem;
+}
+
+
+
+@media (max-width: 768px) {
+    .portal-header .user-section {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-end;
+    }
+    
+    .logout-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .custom-alert-modal {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    .alert-header,
+    .alert-body,
+    .alert-footer {
+        padding: 1.25rem;
+    }
+    
+    .alert-footer {
+        flex-direction: column;
+    }
+    
+    .alert-btn {
+        width: 100%;
+    }
+}
+</style> 

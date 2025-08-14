@@ -1,38 +1,41 @@
 {% extends "templates/base_portal.html" %}
 
-{% block title %}Customer Ledger - Isoft Customer Portal{% endblock %}
+{% block title %}Customer Payment Entries - Isoft Customer Portal{% endblock %}
 
 {% block page_content %}
-<!-- Ledger Content -->
+<!-- Payment Entries Content -->
 <div class="main-content">
     <div class="container">
         <!-- Summary Cards -->
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-value" id="total-debits">0</div>
-                <div class="summary-label">
-                    <i class="fas fa-arrow-down"></i>
-                    Total Debits
-                </div>
+                <div class="summary-value" id="total-entries">0</div>
+                <div class="summary-label">Total Entries</div>
             </div>
             <div class="summary-card">
-                <div class="summary-value" id="total-credits">0</div>
-                <div class="summary-label">
-                    <i class="fas fa-arrow-up"></i>
-                    Total Credits
-                </div>
+                <div class="summary-value amount-positive" id="total-received">0</div>
+                <div class="summary-label">Total Received</div>
             </div>
-            <div class="summary-card balance-card" id="balance-card">
-                <div class="summary-value" id="current-balance">0</div>
-                <div class="summary-label">
-                    <i class="fas fa-balance-scale"></i>
-                    Current Balance
-                </div>
+            <div class="summary-card">
+                <div class="summary-value amount-negative" id="total-paid">0</div>
+                <div class="summary-label">Total Paid</div>
+            </div>
+            <div class="summary-card balance-card" id="net-amount-card">
+                <div class="summary-value" id="net-amount">0</div>
+                <div class="summary-label">Net Amount</div>
             </div>
         </div>
 
         <!-- Filters -->
         <div class="filter-row">
+            <div class="filter-group">
+                <label for="payment-type-filter">Type:</label>
+                <select id="payment-type-filter" class="filter-input">
+                    <option value="">All Types</option>
+                    <option value="Receive">Receive</option>
+                    <option value="Pay">Pay</option>
+                </select>
+            </div>
             <div class="filter-group">
                 <label for="from-date">From Date:</label>
                 <input type="date" id="from-date" class="filter-input">
@@ -42,18 +45,18 @@
                 <input type="date" id="to-date" class="filter-input">
             </div>
             <div class="filter-group">
-                <button class="filter-btn" onclick="customerLedger.applyFilters()">
+                <button class="filter-btn" onclick="customerPaymentEntries.applyFilters()">
                     <i class="fas fa-filter"></i> Apply Filters
                 </button>
             </div>
         </div>
 
-        <!-- Ledger Table -->
+        <!-- Payment Entries Table -->
         <div class="data-section">
             <div class="section-header">
-                <h2 class="section-title">Customer Ledger</h2>
+                <h2 class="section-title">Payment Entries</h2>
                 <div class="section-actions">
-                    <button class="refresh-btn" title="Refresh" onclick="customerLedger.refreshData()">
+                    <button class="refresh-btn" title="Refresh" onclick="customerPaymentEntries.refreshData()">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     <button class="export-btn export-excel-btn">
@@ -69,16 +72,17 @@
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th>Payment Entry</th>
                             <th>Date</th>
-                            <th>Reference</th>
-                            <th>Description</th>
-                            <th>Debit</th>
-                            <th>Credit</th>
-                            <th>Balance</th>
-                            <th>Remarks</th>
+                            <th>Type</th>
+                            <th>Mode of Payment</th>
+                            <th>Amount</th>
+                            <th>Reference No</th>
+                            <th>Status</th>
+                            <th>Print</th>
                         </tr>
                     </thead>
-                    <tbody id="ledger-entries">
+                    <tbody id="payment-entries-list">
                         <!-- Loading state will be handled by JavaScript -->
                     </tbody>
                 </table>
@@ -92,7 +96,7 @@
                     </div>
                     <div class="page-size-selector">
                         <label>Show:</label>
-                        <select id="page-size-select" onchange="customerLedger.changePageSize()">
+                        <select id="page-size-select" onchange="customerPaymentEntries.changePageSize()">
                             <option value="10" selected>10</option>
                             <option value="20">20</option>
                             <option value="50">50</option>
@@ -101,19 +105,19 @@
                     </div>
                 </div>
                 <div class="pagination-center">
-                    <button id="first-page" onclick="customerLedger.goToPage(1)">
+                    <button id="first-page" onclick="customerPaymentEntries.goToPage(1)">
                         <i class="fas fa-angle-double-left"></i>
                     </button>
-                    <button id="prev-page" onclick="customerLedger.previousPage()">
+                    <button id="prev-page" onclick="customerPaymentEntries.previousPage()">
                         <i class="fas fa-angle-left"></i> Previous
                     </button>
                     <span class="page-info">
                         Page <span id="current-page">1</span> of <span id="total-pages">1</span>
                     </span>
-                    <button id="next-page" onclick="customerLedger.nextPage()">
+                    <button id="next-page" onclick="customerPaymentEntries.nextPage()">
                         Next <i class="fas fa-angle-right"></i>
                     </button>
-                    <button id="last-page" onclick="customerLedger.goToLastPage()">
+                    <button id="last-page" onclick="customerPaymentEntries.goToLastPage()">
                         <i class="fas fa-angle-double-right"></i>
                     </button>
                 </div>
@@ -129,28 +133,14 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/assets/isoft_customer_portal/js/customer_ledger.js"></script>
+<script src="/assets/js/customer_payment_entries.js"></script>
 {% endblock %}
 
 {% block page_init %}
 <script>
-    // Initialize Customer Ledger with error handling
+    // Initialize Customer Payment Entries
     $(document).ready(function() {
-        try {
-            // Check if already initialized
-            if (window.customerLedger) {
-                return;
-            }
-            
-            // Global error handler for uncaught errors
-            window.addEventListener('error', function(e) {
-                // Silent error handling
-            });
-            
-            window.customerLedger = new isoft_customer_portal.CustomerLedger();
-        } catch (error) {
-            // Silent error handling
-        }
+        window.customerPaymentEntries = new isoft_customer_portal.CustomerPaymentEntries();
     });
 </script>
-{% endblock %} 
+{% endblock %}

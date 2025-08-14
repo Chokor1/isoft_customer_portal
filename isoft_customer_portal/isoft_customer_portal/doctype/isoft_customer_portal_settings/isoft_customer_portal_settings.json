@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-08-01 12:55:17.508000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_invoice_print_format",
+  "sales_order_print_format",
+  "quotation_print_format",
+  "payment_entry_print_format",
+  "delivery_note_print_format"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_invoice_print_format",
+   "fieldtype": "Link",
+   "label": "Sales Invoice Print Format",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "sales_order_print_format",
+   "fieldtype": "Link",
+   "label": "Sales Order Print Format",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "quotation_print_format",
+   "fieldtype": "Link",
+   "label": "Quotation Print Format",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "payment_entry_print_format",
+   "fieldtype": "Link",
+   "label": "Payment Entry Print Format",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "delivery_note_print_format",
+   "fieldtype": "Link",
+   "label": "Delivery Note Print Format",
+   "options": "Print Format"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-08-01 12:55:17.508000",
+ "modified_by": "Administrator",
+ "module": "Isoft Customer Portal",
+ "name": "Isoft Customer Portal Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

@@ -4,14 +4,17 @@ frappe.provide('isoft_customer_portal');
 isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
     constructor() {
         this.currentPage = 1;
-        this.pageLength = 20;
+        this.pageLength = 10;
         this.filters = {};
         this.init();
     }
 
     init() {
+        // Initialize currency first, then load data
+        isoft_customer_portal.utils.getDefaultCurrency().then(() => {
+            this.loadQuotationsData();
+        });
         this.bindEvents();
-        this.loadQuotationsData();
     }
 
     bindEvents() {
@@ -39,11 +42,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
         // Refresh button
         $('.refresh-btn').on('click', () => this.loadQuotationsData());
 
-        // Quotation row clicks
-        $(document).on('click', '.quotation-row', (e) => {
-            const quotationName = $(e.currentTarget).data('quotation');
-            this.viewQuotation(quotationName);
-        });
+        // Removed row click handler - no longer redirects to document
     }
 
     applyFilters() {
@@ -87,7 +86,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
     }
 
     updateQuotationsTable(data) {
-        const container = $('#quotations-table tbody');
+        const container = $('#quotations-list');
         container.empty();
 
         if (data.quotations && data.quotations.length > 0) {
@@ -96,7 +95,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
                 container.append(row);
             });
         } else {
-            container.html('<tr><td colspan="8" class="text-center">No quotations found</td></tr>');
+            container.html('<tr><td colspan="6" class="text-center">No quotations found</td></tr>');
         }
 
         this.updatePagination(data);
@@ -104,23 +103,24 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
     }
 
     createQuotationRow(quotation) {
-        const formattedDate = frappe.format_date(quotation.transaction_date);
-        const formattedAmount = frappe.format_currency(quotation.grand_total);
-        const formattedValidTill = quotation.valid_till ? frappe.format_date(quotation.valid_till) : '-';
+        // Use currency from quotation data or fallback to cached currency
+        const currency = quotation.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        
+        const formattedDate = isoft_customer_portal.utils.formatDate(quotation.transaction_date);
+        const formattedAmount = isoft_customer_portal.utils.formatCurrency(quotation.grand_total, currency);
+        const formattedValidTill = quotation.valid_till ? isoft_customer_portal.utils.formatDate(quotation.valid_till) : '-';
         const statusClass = this.getStatusClass(quotation.status);
 
         return `
             <tr class="quotation-row" data-quotation="${quotation.name}">
-                <td>${quotation.name}</td>
+                <td><strong>${quotation.name}</strong></td>
                 <td>${formattedDate}</td>
-                <td>${quotation.party_name || ''}</td>
-                <td class="text-right">${formattedAmount}</td>
-                <td><span class="status-badge ${statusClass}">${quotation.status || 'Draft'}</span></td>
                 <td>${formattedValidTill}</td>
-                <td>${quotation.valid_days || '-'}</td>
+                <td><strong>${formattedAmount}</strong></td>
+                <td><span class="status-badge ${statusClass}">${quotation.status || 'Open'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary view-quotation-btn" data-quotation="${quotation.name}">
-                        <i class="fas fa-eye"></i> View
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Quotation', '${quotation.name}')" title="Print Quotation">
+                        <i class="fas fa-print"></i>
                     </button>
                 </td>
             </tr>
@@ -129,7 +129,6 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
 
     getStatusClass(status) {
         const statusMap = {
-            'Draft': 'status-draft',
             'Open': 'status-open',
             'Replied': 'status-replied',
             'Ordered': 'status-ordered',
@@ -181,7 +180,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
     updateSummary(summary) {
         if (summary) {
             $('#total-quotations').text(summary.total_quotations || 0);
-            $('#total-amount').text(frappe.format_currency(summary.total_amount || 0));
+            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0));
             $('#open-quotations').text(summary.open_quotations || 0);
         }
     }
