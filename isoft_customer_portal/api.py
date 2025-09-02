@@ -13,20 +13,29 @@ def validate_date_format(date_str):
         if not date_str:
             return None
         
+        # Debug: Log the input date string
+        frappe.logger().info(f"validate_date_format - Input: '{date_str}' (type: {type(date_str)})")
+        
+        # Convert to string and strip whitespace
+        date_str = str(date_str).strip()
+        
         # Try different date formats
         date_formats = [
-            '%Y-%m-%d',      # 2024-01-01
+            '%Y-%m-%d',      # 2024-01-01 (HTML date input format)
             '%m/%d/%Y',      # 01/01/2024
             '%d/%m/%Y',      # 01/01/2024 (European)
             '%Y-%m-%d %H:%M:%S',  # 2024-01-01 00:00:00
+            '%Y/%m/%d',      # 2024/01/01
+            '%d-%m-%Y',      # 01-01-2024
         ]
         
         from datetime import datetime
         
         for fmt in date_formats:
             try:
-                date_obj = datetime.strptime(str(date_str), fmt)
+                date_obj = datetime.strptime(date_str, fmt)
                 formatted_date = date_obj.strftime('%Y-%m-%d')
+                frappe.logger().info(f"validate_date_format - Successfully parsed with format '{fmt}': {formatted_date}")
                 return formatted_date
             except ValueError:
                 continue
@@ -35,11 +44,14 @@ def validate_date_format(date_str):
         try:
             date_obj = getdate(date_str)
             formatted_date = date_obj.strftime('%Y-%m-%d')
+            frappe.logger().info(f"validate_date_format - Parsed with Frappe getdate: {formatted_date}")
             return formatted_date
-        except Exception:
+        except Exception as e:
+            frappe.logger().error(f"validate_date_format - Frappe getdate failed: {str(e)}")
             return None
             
-    except Exception:
+    except Exception as e:
+        frappe.logger().error(f"validate_date_format - Error: {str(e)}")
         return None
 
 def validate_date_range(from_date, to_date):
@@ -59,12 +71,19 @@ def build_date_filter(filters, date_field):
     if not filters:
         return {}
     
+    # Debug: Log input values
+    frappe.logger().info(f"build_date_filter - Input filters: {filters}, date_field: {date_field}")
+    
     from_date = validate_date_format(filters.get('from_date'))
     to_date = validate_date_format(filters.get('to_date'))
+    
+    # Debug: Log validated dates
+    frappe.logger().info(f"build_date_filter - Validated dates: from_date={from_date}, to_date={to_date}")
     
     # Validate date range
     if from_date and to_date:
         is_valid, error_msg = validate_date_range(from_date, to_date)
+        frappe.logger().info(f"build_date_filter - Date range validation: is_valid={is_valid}, error={error_msg}")
         if not is_valid:
             frappe.log_error(f"Date validation error: {error_msg}")
             return {}
@@ -72,11 +91,22 @@ def build_date_filter(filters, date_field):
     query_filters = {}
     
     if from_date and to_date:
+        # Try different BETWEEN syntaxes - Frappe might expect different format
+        # Option 1: Standard between with list
         query_filters[date_field] = ['between', [from_date, to_date]]
+        frappe.logger().info(f"build_date_filter - Using BETWEEN filter (list): {query_filters}")
+        
+        # If that doesn't work, we might need to use a different approach
+        # Let's add a fallback method that uses SQL directly
+        
     elif from_date:
         query_filters[date_field] = [">=", from_date]
+        frappe.logger().info(f"build_date_filter - Using >= filter: {query_filters}")
     elif to_date:
         query_filters[date_field] = ["<=", to_date]
+        frappe.logger().info(f"build_date_filter - Using <= filter: {query_filters}")
+    else:
+        frappe.logger().info(f"build_date_filter - No date filters applied")
     
     return query_filters
 
@@ -124,36 +154,66 @@ def get_customer_name():
 def get_total_invoices(customer):
     """Get total number of invoices for customer"""
     try:
-        return frappe.db.count("Sales Invoice", {"customer": customer, "docstatus": ["!=", 2]})
-    except:
+        # Temporarily ignore permissions to get accurate count
+        frappe.flags.ignore_permissions = True
+        count = frappe.db.count("Sales Invoice", {"customer": customer, "docstatus": ["!=", 2]})
+        frappe.flags.ignore_permissions = False
+        return count
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error getting total invoices for {customer}: {str(e)}")
         return 0
 
 def get_total_quotations(customer):
     """Get total number of quotations for customer"""
     try:
-        return frappe.db.count("Quotation", {"party_name": customer, "docstatus": ["!=", 2]})
-    except:
+        # Temporarily ignore permissions to get accurate count
+        frappe.flags.ignore_permissions = True
+        count = frappe.db.count("Quotation", {"party_name": customer, "docstatus": ["!=", 2]})
+        frappe.flags.ignore_permissions = False
+        return count
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error getting total quotations for {customer}: {str(e)}")
         return 0
 
 def get_total_deliveries(customer):
     """Get total number of delivery notes for customer"""
     try:
-        return frappe.db.count("Delivery Note", {"customer": customer, "docstatus": ["!=", 2]})
-    except:
+        # Temporarily ignore permissions to get accurate count
+        frappe.flags.ignore_permissions = True
+        count = frappe.db.count("Delivery Note", {"customer": customer, "docstatus": ["!=", 2]})
+        frappe.flags.ignore_permissions = False
+        return count
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error getting total deliveries for {customer}: {str(e)}")
         return 0
 
 def get_total_sales_orders(customer):
     """Get total number of sales orders for customer"""
     try:
-        return frappe.db.count("Sales Order", {"customer": customer, "docstatus": ["!=", 2]})
-    except:
+        # Temporarily ignore permissions to get accurate count
+        frappe.flags.ignore_permissions = True
+        count = frappe.db.count("Sales Order", {"customer": customer, "docstatus": ["!=", 2]})
+        frappe.flags.ignore_permissions = False
+        return count
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error getting total sales orders for {customer}: {str(e)}")
         return 0
 
 def get_total_payments(customer):
     """Get total number of payment entries for customer"""
     try:
-        return frappe.db.count("Payment Entry", {"party_name": customer, "docstatus": ["!=", 2]})
-    except:
+        # Temporarily ignore permissions to get accurate count
+        frappe.flags.ignore_permissions = True
+        count = frappe.db.count("Payment Entry", {"party_name": customer, "docstatus": ["!=", 2]})
+        frappe.flags.ignore_permissions = False
+        return count
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error getting total payments for {customer}: {str(e)}")
         return 0
 
 def get_outstanding_amount(customer):
@@ -202,25 +262,49 @@ def get_ledger_summary(customer, filters=None):
 def get_invoices_summary(customer, filters=None):
     """Get invoices summary for customer"""
     try:
-        query_filters = {"customer": customer, "docstatus": ["!=", 2]}
+        # Temporarily ignore permissions to get accurate counts
+        frappe.flags.ignore_permissions = True
         
-        # Add date filters with validation
-        date_filters = build_date_filter(filters, "posting_date")
-        query_filters.update(date_filters)
+        # Build base SQL conditions
+        sql_conditions = ["customer = %(customer)s", "docstatus != 2"]
+        sql_params = {"customer": customer}
         
-        if filters and filters.get('status'):
-            query_filters["status"] = filters.get('status')
+        # Add date filters if provided
+        if filters:
+            if filters.get('from_date') and filters.get('to_date'):
+                from_date = validate_date_format(filters.get('from_date'))
+                to_date = validate_date_format(filters.get('to_date'))
+                if from_date and to_date:
+                    sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                    sql_params["from_date"] = from_date
+                    sql_params["to_date"] = to_date
+            
+            # Add status filter if provided
+            if filters.get('status'):
+                sql_conditions.append("status = %(status_filter)s")
+                sql_params["status_filter"] = filters.get('status')
         
-        result = frappe.db.sql("""
+        where_clause = " AND ".join(sql_conditions)
+        
+        # Build SQL query with proper status-based counting
+        sql_query = f"""
             SELECT 
                 COUNT(*) as total_invoices,
                 COALESCE(SUM(grand_total), 0) as total_amount,
                 COALESCE(SUM(outstanding_amount), 0) as total_outstanding,
                 COUNT(CASE WHEN status = 'Paid' THEN 1 END) as paid_invoices,
-                COUNT(CASE WHEN status = 'Unpaid' THEN 1 END) as unpaid_invoices
+                COUNT(CASE WHEN status = 'Unpaid' THEN 1 END) as unpaid_invoices,
+                COUNT(CASE WHEN status = 'Partly Paid' THEN 1 END) as partly_paid_invoices,
+                COUNT(CASE WHEN status = 'Overdue' THEN 1 END) as overdue_invoices,
+                COUNT(CASE WHEN status = 'Draft' THEN 1 END) as draft_invoices,
+                COUNT(CASE WHEN status = 'Return' THEN 1 END) as return_invoices,
+                COUNT(CASE WHEN status = 'Credit Note Issued' THEN 1 END) as credit_note_invoices
             FROM `tabSales Invoice`
-            WHERE customer = %s AND docstatus != 2
-        """, customer)
+            WHERE {where_clause}
+        """
+        
+        result = frappe.db.sql(sql_query, sql_params)
+        frappe.flags.ignore_permissions = False
         
         if result:
             return {
@@ -228,14 +312,28 @@ def get_invoices_summary(customer, filters=None):
                 'total_amount': result[0][1] or 0,
                 'total_outstanding': result[0][2] or 0,
                 'paid_invoices': result[0][3] or 0,
-                'unpaid_invoices': result[0][4] or 0
+                'unpaid_invoices': result[0][4] or 0,
+                'partly_paid_invoices': result[0][5] or 0,
+                'overdue_invoices': result[0][6] or 0,
+                'draft_invoices': result[0][7] or 0,
+                'return_invoices': result[0][8] or 0,
+                'credit_note_invoices': result[0][9] or 0
             }
         
-        return {'total_invoices': 0, 'total_amount': 0, 'total_outstanding': 0, 'paid_invoices': 0, 'unpaid_invoices': 0}
+        return {
+            'total_invoices': 0, 'total_amount': 0, 'total_outstanding': 0, 
+            'paid_invoices': 0, 'unpaid_invoices': 0, 'partly_paid_invoices': 0,
+            'overdue_invoices': 0, 'draft_invoices': 0, 'return_invoices': 0, 'credit_note_invoices': 0
+        }
         
     except Exception as e:
+        frappe.flags.ignore_permissions = False
         frappe.log_error(f"Error in get_invoices_summary: {str(e)}")
-        return {'total_invoices': 0, 'total_amount': 0, 'total_outstanding': 0, 'paid_invoices': 0, 'unpaid_invoices': 0}
+        return {
+            'total_invoices': 0, 'total_amount': 0, 'total_outstanding': 0, 
+            'paid_invoices': 0, 'unpaid_invoices': 0, 'partly_paid_invoices': 0,
+            'overdue_invoices': 0, 'draft_invoices': 0, 'return_invoices': 0, 'credit_note_invoices': 0
+        }
 
 def get_quotations_summary(customer, filters=None):
     """Get quotations summary for customer"""
@@ -528,20 +626,65 @@ def get_customer_ledger(filters=None, page=1, page_length=10):
         date_filters = build_date_filter(filters, "posting_date")
         query_filters.update(date_filters)
         
-        # Get total count
-        total = frappe.db.count("GL Entry", query_filters)
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_ledger - Detected date range filter, using SQL approach")
         
-        # Get entries with pagination
-        start_index = (page - 1) * page_length
-        
-        entries = frappe.get_all(
-            "GL Entry",
-            filters=query_filters,
-            fields=["name", "posting_date", "voucher_type", "voucher_no", "debit", "credit", "debit_in_account_currency", "credit_in_account_currency", "account_currency", "remarks"],
-            order_by="posting_date desc, creation desc",
-            start=start_index,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["party = %(customer)s"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabGL Entry` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get entries with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, posting_date, voucher_type, voucher_no, debit, credit, 
+                       debit_in_account_currency, credit_in_account_currency, account_currency, remarks
+                FROM `tabGL Entry` 
+                WHERE {where_clause}
+                ORDER BY posting_date DESC, creation DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            ledger_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            entries = ledger_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("GL Entry", query_filters)
+            
+            # Get entries with pagination
+            start_index = (page - 1) * page_length
+            
+            entries = frappe.get_all(
+                "GL Entry",
+                filters=query_filters,
+                fields=["name", "posting_date", "voucher_type", "voucher_no", "debit", "credit", "debit_in_account_currency", "credit_in_account_currency", "account_currency", "remarks"],
+                order_by="posting_date desc, creation desc",
+                start=start_index,
+                page_length=page_length
+            )
         
         # Add currency to each entry
         currency = get_company_currency()
@@ -585,30 +728,84 @@ def get_customer_invoices(filters=None, page=1, page_length=10):
         else:
             filters = {}
         
+        # Debug: Log received filters
+        frappe.logger().info(f"get_customer_invoices - Received filters: {filters}")
+        
         # Build query filters
         query_filters = {"customer": customer, "docstatus": ["!=", 2]}
         
         # Add date filters with validation
         date_filters = build_date_filter(filters, "posting_date")
+        frappe.logger().info(f"get_customer_invoices - Date filters: {date_filters}")
+        
         query_filters.update(date_filters)
+        frappe.logger().info(f"get_customer_invoices - Final query filters: {query_filters}")
         
         if filters.get('status'):
             query_filters["status"] = filters.get('status')
         
-        # Get total count
-        total = frappe.db.count("Sales Invoice", query_filters)
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_invoices - Detected date range filter, using SQL approach")
         
-        # Get invoices with pagination
-        start_index = (page - 1) * page_length
-        
-        invoices = frappe.get_all(
-            "Sales Invoice",
-            filters=query_filters,
-            fields=["name", "posting_date", "due_date", "grand_total", "outstanding_amount", "status", "currency"],
-            order_by="posting_date desc",
-            start=start_index,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["customer = %(customer)s", "docstatus != 2"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            if filters.get('status'):
+                sql_conditions.append("status = %(status)s")
+                sql_params["status"] = filters.get('status')
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabSales Invoice` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get invoices with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, posting_date, due_date, grand_total, outstanding_amount, status, currency
+                FROM `tabSales Invoice` 
+                WHERE {where_clause}
+                ORDER BY posting_date DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            invoice_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            invoices = invoice_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("Sales Invoice", query_filters)
+            
+            # Get invoices with pagination
+            start_index = (page - 1) * page_length
+            
+            invoices = frappe.get_all(
+                "Sales Invoice",
+                filters=query_filters,
+                fields=["name", "posting_date", "due_date", "grand_total", "outstanding_amount", "status", "currency"],
+                order_by="posting_date desc",
+                start=start_index,
+                page_length=page_length
+            )
         
         # Calculate paid amount for each invoice
         for invoice in invoices:
@@ -664,18 +861,66 @@ def get_customer_quotations(filters=None, page=1, page_length=10):
         if filters.get('status'):
             query_filters["status"] = filters.get('status')
         
-        # Get total count
-        total = frappe.db.count("Quotation", query_filters)
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_quotations - Detected date range filter, using SQL approach")
         
-        # Get quotations with pagination
-        quotations = frappe.get_all(
-            "Quotation",
-            filters=query_filters,
-            fields=["name", "transaction_date", "valid_till", "grand_total", "status", "currency"],
-            order_by="transaction_date desc",
-            start=(page - 1) * page_length,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["party_name = %(customer)s", "docstatus != 2"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("transaction_date >= %(from_date)s AND transaction_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            if filters.get('status'):
+                sql_conditions.append("status = %(status)s")
+                sql_params["status"] = filters.get('status')
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabQuotation` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get quotations with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, transaction_date, valid_till, grand_total, status, currency
+                FROM `tabQuotation` 
+                WHERE {where_clause}
+                ORDER BY transaction_date DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            quotation_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            quotations = quotation_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("Quotation", query_filters)
+            
+            # Get quotations with pagination
+            quotations = frappe.get_all(
+                "Quotation",
+                filters=query_filters,
+                fields=["name", "transaction_date", "valid_till", "grand_total", "status", "currency"],
+                order_by="transaction_date desc",
+                start=(page - 1) * page_length,
+                page_length=page_length
+            )
         
         # Ensure currency is set for each quotation
         for quotation in quotations:
@@ -729,20 +974,66 @@ def get_customer_delivery_notes(filters=None, page=1, page_length=10):
         if filters.get('status'):
             query_filters["status"] = filters.get('status')
         
-        frappe.log_error(f"Delivery notes query - Customer: {customer}, Filters: {query_filters}")
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_delivery_notes - Detected date range filter, using SQL approach")
         
-        # Get total count
-        total = frappe.db.count("Delivery Note", query_filters)
-        
-        # Get delivery notes with pagination
-        delivery_notes = frappe.get_all(
-            "Delivery Note",
-            filters=query_filters,
-            fields=["name", "posting_date", "customer", "grand_total", "status", "currency"],
-            order_by="posting_date desc",
-            start=(page - 1) * page_length,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["customer = %(customer)s", "docstatus != 2"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            if filters.get('status'):
+                sql_conditions.append("status = %(status)s")
+                sql_params["status"] = filters.get('status')
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabDelivery Note` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get delivery notes with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, posting_date, customer, grand_total, status, currency
+                FROM `tabDelivery Note` 
+                WHERE {where_clause}
+                ORDER BY posting_date DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            delivery_note_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            delivery_notes = delivery_note_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("Delivery Note", query_filters)
+            
+            # Get delivery notes with pagination
+            delivery_notes = frappe.get_all(
+                "Delivery Note",
+                filters=query_filters,
+                fields=["name", "posting_date", "customer", "grand_total", "status", "currency"],
+                order_by="posting_date desc",
+                start=(page - 1) * page_length,
+                page_length=page_length
+            )
         
         frappe.log_error(f"Delivery notes found - Count: {len(delivery_notes)}, Notes: {delivery_notes}")
         
@@ -798,18 +1089,66 @@ def get_customer_sales_orders(filters=None, page=1, page_length=10):
         if filters.get('status'):
             query_filters["status"] = filters.get('status')
         
-        # Get total count
-        total = frappe.db.count("Sales Order", query_filters)
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_sales_orders - Detected date range filter, using SQL approach")
         
-        # Get sales orders with pagination
-        sales_orders = frappe.get_all(
-            "Sales Order",
-            filters=query_filters,
-            fields=["name", "transaction_date", "delivery_date", "grand_total", "status", "currency"],
-            order_by="transaction_date desc",
-            start=(page - 1) * page_length,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["customer = %(customer)s", "docstatus != 2"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("transaction_date >= %(from_date)s AND transaction_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            if filters.get('status'):
+                sql_conditions.append("status = %(status)s")
+                sql_params["status"] = filters.get('status')
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabSales Order` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get sales orders with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, transaction_date, delivery_date, grand_total, status, currency
+                FROM `tabSales Order` 
+                WHERE {where_clause}
+                ORDER BY transaction_date DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            sales_order_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            sales_orders = sales_order_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("Sales Order", query_filters)
+            
+            # Get sales orders with pagination
+            sales_orders = frappe.get_all(
+                "Sales Order",
+                filters=query_filters,
+                fields=["name", "transaction_date", "delivery_date", "grand_total", "status", "currency"],
+                order_by="transaction_date desc",
+                start=(page - 1) * page_length,
+                page_length=page_length
+            )
         
         # Ensure currency is set for each sales order
         for sales_order in sales_orders:
@@ -999,7 +1338,9 @@ def get_customer_payment_entries(filters=None, page=1, page_length=10):
             page_length = 10
         
         customer = get_customer_from_user()
+        frappe.logger().info(f"DEBUG: get_customer_payment_entries - Customer identified: {customer}")
         if not customer:
+            frappe.logger().info("DEBUG: get_customer_payment_entries - No customer found, returning empty data")
             return {"entries": [], "total": 0, "summary": {}}
         
         if filters:
@@ -1017,23 +1358,74 @@ def get_customer_payment_entries(filters=None, page=1, page_length=10):
         if filters.get('payment_type'):
             query_filters["payment_type"] = filters.get('payment_type')
         
-        # Get total count
-        total = frappe.db.count("Payment Entry", query_filters)
+        # Check if we have a date range filter that might be problematic
+        has_date_range = False
+        if filters and filters.get('from_date') and filters.get('to_date'):
+            has_date_range = True
+            frappe.logger().info(f"get_customer_payment_entries - Detected date range filter, using SQL approach")
         
-        # Get payment entries with pagination
-        entries = frappe.get_all(
-            "Payment Entry",
-            filters=query_filters,
-            fields=[
-                "name", "posting_date", "payment_type", "mode_of_payment", 
-                "paid_amount", "received_amount", "reference_no", "reference_date",
-                "source_exchange_rate", "target_exchange_rate", "total_allocated_amount",
-                "unallocated_amount", "status", "remarks"
-            ],
-            order_by="posting_date desc, creation desc",
-            start=(page - 1) * page_length,
-            page_length=page_length
-        )
+        if has_date_range:
+            # Use direct SQL for date range queries to avoid BETWEEN filter issues
+            from_date = validate_date_format(filters.get('from_date'))
+            to_date = validate_date_format(filters.get('to_date'))
+            
+            # Build base SQL conditions
+            sql_conditions = ["party = %(customer)s", "party_type = 'Customer'", "docstatus != 2"]
+            sql_params = {"customer": customer}
+            
+            if from_date and to_date:
+                sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                sql_params["from_date"] = from_date
+                sql_params["to_date"] = to_date
+            
+            if filters.get('payment_type'):
+                sql_conditions.append("payment_type = %(payment_type)s")
+                sql_params["payment_type"] = filters.get('payment_type')
+            
+            where_clause = " AND ".join(sql_conditions)
+            
+            # Get total count with SQL
+            count_sql = f"SELECT COUNT(*) FROM `tabPayment Entry` WHERE {where_clause}"
+            total_result = frappe.db.sql(count_sql, sql_params)
+            total = total_result[0][0] if total_result else 0
+            
+            # Get payment entries with SQL
+            start_index = (page - 1) * page_length
+            data_sql = f"""
+                SELECT name, posting_date, payment_type, mode_of_payment, 
+                       paid_amount, received_amount, reference_no, reference_date,
+                       source_exchange_rate, target_exchange_rate, total_allocated_amount,
+                       unallocated_amount, status, remarks
+                FROM `tabPayment Entry` 
+                WHERE {where_clause}
+                ORDER BY posting_date DESC, creation DESC 
+                LIMIT %(start)s, %(limit)s
+            """
+            sql_params["start"] = start_index
+            sql_params["limit"] = page_length
+            
+            payment_data = frappe.db.sql(data_sql, sql_params, as_dict=True)
+            entries = payment_data
+            
+        else:
+            # Use standard frappe.get_all for non-date-range queries
+            # Get total count
+            total = frappe.db.count("Payment Entry", query_filters)
+            
+            # Get payment entries with pagination
+            entries = frappe.get_all(
+                "Payment Entry",
+                filters=query_filters,
+                fields=[
+                    "name", "posting_date", "payment_type", "mode_of_payment", 
+                    "paid_amount", "received_amount", "reference_no", "reference_date",
+                    "source_exchange_rate", "target_exchange_rate", "total_allocated_amount",
+                    "unallocated_amount", "status", "remarks"
+                ],
+                order_by="posting_date desc, creation desc",
+                start=(page - 1) * page_length,
+                page_length=page_length
+            )
         
         # Add currency information
         currency = get_company_currency()
@@ -1061,51 +1453,135 @@ def get_customer_payment_entries(filters=None, page=1, page_length=10):
 def get_payment_entries_summary(customer, filters=None):
     """Get payment entries summary for customer"""
     try:
-        # Build base filters
-        base_filters = {"party": customer, "party_type": "Customer", "docstatus": ["!=", 2]}
+        # Debug logging - function start
+        frappe.logger().info(f"DEBUG: get_payment_entries_summary called with customer: {customer}, filters: {filters}")
         
-        # Add date filters with validation
-        date_filters = build_date_filter(filters, "posting_date")
-        base_filters.update(date_filters)
+        # Temporarily ignore permissions to get accurate counts
+        frappe.flags.ignore_permissions = True
         
-        # Get payment entries statistics
-        total_entries = frappe.db.count("Payment Entry", base_filters)
+        # Build base SQL conditions
+        sql_conditions = ["party = %(customer)s", "party_type = 'Customer'", "docstatus != 2"]
+        sql_params = {"customer": customer}
         
-        # Get total received amount
-        received_filters = base_filters.copy()
-        received_filters["payment_type"] = "Receive"
-        total_received = frappe.db.sql("""
-            SELECT SUM(received_amount) 
-            FROM `tabPayment Entry` 
-            WHERE party = %s AND party_type = 'Customer' AND payment_type = 'Receive' 
-            AND docstatus != 2
-        """, [customer])[0][0] or 0
+        # Debug logging - initial conditions
+        frappe.logger().info(f"DEBUG: Initial SQL conditions: {sql_conditions}")
+        frappe.logger().info(f"DEBUG: Initial SQL params: {sql_params}")
         
-        # Get total paid amount (refunds, etc.)
-        paid_filters = base_filters.copy()
-        paid_filters["payment_type"] = "Pay"
-        total_paid = frappe.db.sql("""
-            SELECT SUM(paid_amount) 
-            FROM `tabPayment Entry` 
-            WHERE party = %s AND party_type = 'Customer' AND payment_type = 'Pay' 
-            AND docstatus != 2
-        """, [customer])[0][0] or 0
+        # Add date filters if provided
+        if filters:
+            if filters.get('from_date') and filters.get('to_date'):
+                from_date = validate_date_format(filters.get('from_date'))
+                to_date = validate_date_format(filters.get('to_date'))
+                if from_date and to_date:
+                    sql_conditions.append("posting_date >= %(from_date)s AND posting_date <= %(to_date)s")
+                    sql_params["from_date"] = from_date
+                    sql_params["to_date"] = to_date
         
-        return {
-            "total_entries": total_entries,
-            "total_received": total_received,
-            "total_paid": total_paid,
-            "net_amount": total_received - total_paid
-        }
+        where_clause = " AND ".join(sql_conditions)
         
-    except Exception as e:
-        frappe.log_error(f"Error in get_payment_entries_summary: {str(e)}")
-        return {
+        # Get comprehensive payment entries statistics
+        sql_query = f"""
+            SELECT 
+                COUNT(*) as total_entries,
+                COALESCE(SUM(CASE WHEN payment_type = 'Receive' THEN received_amount ELSE 0 END), 0) as total_received,
+                COALESCE(SUM(total_allocated_amount), 0) as total_allocated_amount,
+                COALESCE(SUM(unallocated_amount), 0) as unallocated_amount
+            FROM `tabPayment Entry`
+            WHERE {where_clause}
+        """
+        
+        result = frappe.db.sql(sql_query, sql_params)
+        frappe.flags.ignore_permissions = False
+        
+        # Debug logging
+        frappe.logger().info(f"DEBUG: Payment entries summary query: {sql_query}")
+        frappe.logger().info(f"DEBUG: Payment entries summary params: {sql_params}")
+        frappe.logger().info(f"DEBUG: Payment entries summary result: {result}")
+        frappe.logger().info(f"DEBUG: Result type: {type(result)}, Result length: {len(result) if result else 'None'}")
+        
+        if result:
+            summary_data = {
+                "total_entries": result[0][0] or 0,
+                "total_received": result[0][1] or 0,
+                "total_allocated_amount": result[0][2] or 0,
+                "unallocated_amount": result[0][3] or 0
+            }
+            frappe.logger().info(f"DEBUG: Returning summary data: {summary_data}")
+            return summary_data
+        
+        empty_summary = {
             "total_entries": 0,
             "total_received": 0,
-            "total_paid": 0,
-            "net_amount": 0
+            "total_allocated_amount": 0,
+            "unallocated_amount": 0
         }
+        frappe.logger().info(f"DEBUG: No result found, returning empty summary: {empty_summary}")
+        return empty_summary
+        
+    except Exception as e:
+        frappe.flags.ignore_permissions = False
+        frappe.log_error(f"Error in get_payment_entries_summary: {str(e)}")
+        error_summary = {
+            "total_entries": 0,
+            "total_received": 0,
+            "total_allocated_amount": 0,
+            "unallocated_amount": 0
+        }
+        frappe.logger().info(f"DEBUG: Exception occurred, returning error summary: {error_summary}")
+        return error_summary
+
+@frappe.whitelist(allow_guest=True)
+def get_user_language():
+    """Get user language preference"""
+    try:
+        user = frappe.session.user
+        if user and user != 'Guest':
+            # Get user document
+            user_doc = frappe.get_doc("User", user)
+            user_language = getattr(user_doc, 'language', None)
+            
+            # Map ERPNext language codes to our system
+            if user_language:
+                if user_language.lower().startswith('pt'):
+                    return {"language": "pt"}
+                elif user_language.lower().startswith('en'):
+                    return {"language": "en"}
+            
+            # Default to English if no valid language found
+            return {"language": "en"}
+        
+        return {"language": "en"}
+        
+    except Exception as e:
+        frappe.log_error(f"Error in get_user_language: {str(e)}")
+        return {"language": "en"}
+
+@frappe.whitelist(allow_guest=True)
+def set_user_language(language):
+    """Set user language preference"""
+    try:
+        user = frappe.session.user
+        if user and user != 'Guest':
+            # Validate language
+            if language not in ['en', 'pt']:
+                language = 'en'
+            
+            # Map our language codes to ERPNext language codes
+            erpnext_language = 'en' if language == 'en' else 'pt-BR'
+            
+            # Update user document
+            user_doc = frappe.get_doc("User", user)
+            user_doc.language = erpnext_language
+            user_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            return {"success": True, "language": language}
+        
+        return {"success": False, "message": "User not found"}
+        
+    except Exception as e:
+        frappe.log_error(f"Error in set_user_language: {str(e)}")
+        return {"success": False, "message": str(e)}
 
 @frappe.whitelist(allow_guest=True)
 def export_payment_entries_excel(filters=None):
@@ -1454,6 +1930,7 @@ def customer_login(usr, pwd):
     try:
         # Use Frappe's authentication system
         from frappe.auth import LoginManager
+        from isoft_customer_portal.auth import create_customer_user_permission_on_login
         login_manager = LoginManager()
         
         # Set the credentials
@@ -1477,6 +1954,9 @@ def customer_login(usr, pwd):
             # Complete login process
             login_manager.post_login()
             
+            # Create customer user permissions after successful login
+            create_customer_user_permission_on_login()
+            
             return {
                 "success": True, 
                 "message": "Login successful",
@@ -1494,28 +1974,47 @@ def customer_login(usr, pwd):
 def customer_logout():
     """Custom logout for customer portal"""
     try:
-        # Store session info before logout
+        # Check if user is already logged out
+        if frappe.session.user == "Guest":
+            return {
+                "message": {
+                    "success": True,
+                    "message": "Already logged out"
+                }
+            }
+        
+        # Store session info before logout for logging
         original_user = frappe.session.user
         original_sid = frappe.session.sid
         
-        # Proper logout using Frappe's session management
-        if frappe.session.user != "Guest":
-            # Use Frappe's built-in logout mechanism
-            frappe.local.login_manager.logout()
-            
-            # Clear any remaining session data
-            if hasattr(frappe.local, 'session'):
-                frappe.local.session = None
-            if hasattr(frappe.local, 'user'):
-                frappe.local.user = None
-            
-            # Commit any pending database changes
-            frappe.db.commit()
-        else:
-            # User is already Guest, no action needed
-            pass
+        # Clear session from database first
+        if original_sid:
+            frappe.db.sql("DELETE FROM `tabSessions` WHERE sid = %s", original_sid)
         
-        # Return response in the format expected by the JavaScript
+        # Clear all user sessions for this user (optional - for security)
+        frappe.db.sql("DELETE FROM `tabSessions` WHERE user = %s", original_user)
+        
+        # Use Frappe's built-in logout mechanism
+        frappe.local.login_manager.logout()
+        
+        # Force clear session data
+        frappe.session.user = "Guest"
+        frappe.session.sid = None
+        
+        # Clear local session references
+        if hasattr(frappe.local, 'session'):
+            frappe.local.session = None
+        if hasattr(frappe.local, 'user'):
+            frappe.local.user = None
+            
+        # Clear any cached user permissions
+        if hasattr(frappe.local, 'user_perms'):
+            frappe.local.user_perms = {}
+            
+        # Commit database changes
+        frappe.db.commit()
+        
+        # Return success response
         return {
             "message": {
                 "success": True,
@@ -1524,11 +2023,19 @@ def customer_logout():
         }
         
     except Exception as e:
-        # Don't log error if session is already cleared
+        # Log error but still return success to ensure user can logout
         frappe.logger().error(f"Customer logout error: {str(e)}")
         frappe.logger().error(f"Error type: {type(e).__name__}")
         frappe.logger().error(f"Error traceback: {frappe.get_traceback()}")
-        # Return success anyway to ensure user can logout
+        
+        # Force logout even if error occurs
+        try:
+            frappe.session.user = "Guest"
+            frappe.session.sid = None
+            frappe.db.commit()
+        except:
+            pass
+            
         return {
             "message": {
                 "success": True,
@@ -2926,34 +3433,7 @@ def get_customer_data_api():
         frappe.log_error(f"Error in get_customer_data_api: {str(e)}")
         return None
 
-@frappe.whitelist(allow_guest=True)
-def check_customer_auth():
-    """Check if current user is authenticated as customer"""
-    try:
-        user = frappe.session.user
-        
-        if not user or user == 'Guest':
-            return {"authenticated": False, "message": "Not authenticated"}
-        
-        # # Check if user has Customer role
-        # user_roles = frappe.get_roles(user)
-        # if "Customer" not in user_roles:
-        #     return {"authenticated": False, "message": "Customer role required"}
-        
-        # Get customer information
-        customer = get_customer_from_user()
-        if not customer:
-            return {"authenticated": False, "message": "No customer linked to user"}
-        
-        return {
-            "authenticated": True,
-            "user": user,
-            "customer": customer
-        }
-        
-    except Exception as e:
-        frappe.log_error(f"Customer auth check error: {str(e)}")
-        return {"authenticated": False, "message": "Authentication check failed"}
+
 
 @frappe.whitelist(allow_guest=True)
 def test_no_date_filter():
@@ -3174,6 +3654,11 @@ def get_dashboard_analytics(period=30):
         return {'revenue': [], 'status': {}, 'activities': []}
 
 @frappe.whitelist(allow_guest=True)
+def get_dashboard_chart_data(period=365):
+    """Alias for get_dashboard_analytics - Get dashboard chart data for customer portal"""
+    return get_dashboard_analytics(period)
+
+@frappe.whitelist(allow_guest=True)
 def test_dashboard_queries():
     """Test dashboard queries to debug data issues"""
     try:
@@ -3263,4 +3748,10 @@ def get_current_customer_info():
     except Exception as e:
         frappe.log_error(f"Error in get_current_customer_info: {str(e)}")
         return {'customer_name': 'Customer'}
+
+@frappe.whitelist()
+def update_portal_permissions():
+    """Update Customer Portal role permissions with print access"""
+    from .install import update_customer_portal_permissions
+    return update_customer_portal_permissions()
 

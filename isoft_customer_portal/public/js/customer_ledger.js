@@ -225,7 +225,7 @@ isoft_customer_portal.CustomerLedger = class CustomerLedger {
             tbody.empty();
             this.runningBalance = 0;
             
-            const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
             
             entries.forEach((entry, index) => {
                 const debit = parseFloat(entry.debit || 0);
@@ -317,14 +317,22 @@ isoft_customer_portal.CustomerLedger = class CustomerLedger {
 
     updateSummary(summary) {
         try {
-            const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
             
-            // Helper function to safely update element text
+            // Helper function to safely update element text and make it visible
             const safeUpdateText = (selector, value) => {
                 const element = $(selector);
                 if (element && element.length > 0 && element[0]) {
                     try {
                         element.text(value);
+                        // Mark as updated to prevent dashboard animations from hiding it
+                        element.attr('data-summary-updated', 'true');
+                        // Make sure element is visible
+                        element.css({
+                            'opacity': '1',
+                            'transform': 'translateY(0)',
+                            'transition': 'all 0.6s ease-out'
+                        });
                         return true;
                     } catch (e) {
                         return false;

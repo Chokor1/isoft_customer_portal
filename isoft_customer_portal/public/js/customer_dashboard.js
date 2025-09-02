@@ -88,7 +88,7 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
 
     updateBalance(summary) {
         // Format balance with company currency
-        const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         const balance = summary.balance || 0;
         const formattedBalance = isoft_customer_portal.utils.formatCurrency(balance, currency);
         
@@ -134,7 +134,7 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
 
     createTransactionRow(transaction) {
         // Use currency from transaction data or fallback to cached currency
-        const currency = transaction.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = transaction.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         const formattedAmount = isoft_customer_portal.utils.formatCurrency(transaction.amount, currency);
         const formattedDate = isoft_customer_portal.utils.formatDate(transaction.date);
         const statusClass = this.getStatusClass(transaction.status);
@@ -247,7 +247,7 @@ isoft_customer_portal.CustomerDashboard = class CustomerDashboard {
         if (typeof Chart !== 'undefined') {
             // Initialize charts after a short delay to ensure DOM is ready
             setTimeout(() => {
-                if (document.getElementById('revenueChart') || document.getElementById('statusChart')) {
+                if ((document.getElementById('revenueChart') || document.getElementById('statusChart')) && !window.dashboardCharts) {
                     window.dashboardCharts = new DashboardCharts();
                 }
             }, 500);

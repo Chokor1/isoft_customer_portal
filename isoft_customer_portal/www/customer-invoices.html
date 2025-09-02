@@ -21,6 +21,18 @@
                 <div class="summary-label">Unpaid Invoices</div>
             </div>
             <div class="summary-card">
+                <div class="summary-value" id="overdue-invoices">0</div>
+                <div class="summary-label">Overdue Invoices</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="return-invoices">0</div>
+                <div class="summary-label">Return Invoices</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="credit-note-invoices">0</div>
+                <div class="summary-label">Credit Note Issued</div>
+            </div>
+            <div class="summary-card total-amount-card">
                 <div class="summary-value" id="total-amount">0</div>
                 <div class="summary-label">Total Amount</div>
             </div>
@@ -34,8 +46,11 @@
                     <option value="">All Status</option>
                     <option value="Paid">Paid</option>
                     <option value="Unpaid">Unpaid</option>
+                    <option value="Partly Paid">Partly Paid</option>
                     <option value="Overdue">Overdue</option>
                     <option value="Draft">Draft</option>
+                    <option value="Return">Return</option>
+                    <option value="Credit Note Issued">Credit Note Issued</option>
                 </select>
             </div>
             <div class="filter-group">

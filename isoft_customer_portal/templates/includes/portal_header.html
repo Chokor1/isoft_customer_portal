@@ -10,9 +10,27 @@
                 </button>
             </div>
             <div class="user-section" id="user-section" style="display: none;">
-                <button class="logout-btn" onclick="performCustomerLogout()" title="Logout">
+                <!-- Language Switcher -->
+                <div class="language-switcher">
+                    <button class="language-btn" id="languageBtn" title="Change Language">
+                        <i class="fas fa-globe"></i>
+                        <span id="currentLanguage">EN</span>
+                    </button>
+                    <div class="language-dropdown" id="languageDropdown">
+                        <div class="language-option" data-lang="en">
+                            <i class="fas fa-flag-usa"></i>
+                            <span>English</span>
+                        </div>
+                        <div class="language-option" data-lang="pt">
+                            <i class="fas fa-flag"></i>
+                            <span>Português</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="logout-btn" onclick="performCustomerLogout()" title="Logout" data-translate="Logout">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
+                    <span data-translate="Logout">Logout</span>
                 </button>
             </div>
         </div>
@@ -97,63 +115,92 @@ window.printDocumentWithCustomURLDebug = function(doctype, name, format = null) 
     printDocument(doctype, name);
 };
 
+// Create the isoft_customer_portal namespace if it doesn't exist and add printDocument fallback
+window.isoft_customer_portal = window.isoft_customer_portal || {};
+if (!window.isoft_customer_portal.printDocument) {
+    window.isoft_customer_portal.printDocument = function(doctype, name) {
+        // Use the local printDocument function as fallback
+        printDocument(doctype, name);
+    };
+}
+
+// Also create safePrintDocument as a global fallback
+window.safePrintDocument = window.safePrintDocument || function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Use the local printDocument function as fallback
+        printDocument(docType, docName);
+    }
+};
+
 // Function to perform customer logout
 function performCustomerLogout() {
     // Show loading state
     const logoutBtn = document.querySelector('.logout-btn');
-    const originalText = logoutBtn.innerHTML;
-    logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Logging out...</span>';
-    logoutBtn.disabled = true;
+    if (logoutBtn) {
+        const originalText = logoutBtn.innerHTML;
+        logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Logging out...</span>';
+        logoutBtn.disabled = true;
+    }
     
-    // Clear any client-side data immediately
-    if (typeof frappe !== 'undefined' && frappe.session) {
-        try {
-            if (typeof frappe.session.clear === 'function') {
+    // Clear client-side data immediately
+    try {
+        // Clear localStorage
+        localStorage.removeItem('customer_data');
+        localStorage.clear();
+        
+        // Clear sessionStorage
+        sessionStorage.clear();
+        
+        // Clear any frappe-specific data
+        if (typeof frappe !== 'undefined') {
+            if (frappe.session && typeof frappe.session.clear === 'function') {
                 frappe.session.clear();
             }
-        } catch (e) {
-            //
-        }
-    }
-    
-    // Clear all stored data
-    try {
-        localStorage.removeItem('customer_data');
-        
-        const sessionStorageKeys = Object.keys(sessionStorage);
-        sessionStorage.clear();
-    } catch (e) {
-        //
-    }
-    
-    // Clear any frappe-specific data
-    if (typeof frappe !== 'undefined') {
-        try {
-            // Clear any cached data
-            if (frappe.cache) {
+            if (frappe.cache && typeof frappe.cache.clear === 'function') {
                 frappe.cache.clear();
             }
-            // Clear any stored user info
             if (frappe.user) {
                 frappe.user = null;
             }
-        } catch (e) {
-            //
         }
+    } catch (e) {
+        console.log('Client-side cleanup error:', e);
     }
     
-    // Call the logout API in the background (don't wait for response)
-    $.ajax({
-        url: '/api/method/isoft_customer_portal.api.customer_logout',
-        type: 'POST',
-        dataType: 'json',
-        async: true // Make it asynchronous
-    });
+    // Call logout API and then redirect
+    if (typeof frappe !== 'undefined' && frappe.call) {
+        frappe.call({
+            method: 'isoft_customer_portal.api.customer_logout',
+            callback: function(r) {
+                // Redirect regardless of API response
+                window.location.href = '/customer-logout';
+            },
+            error: function(r) {
+                // Redirect even if API fails
+                window.location.href = '/customer-logout';
+            }
+        });
+    } else {
+        // Fallback using jQuery if frappe.call is not available
+        $.ajax({
+            url: '/api/method/isoft_customer_portal.api.customer_logout',
+            type: 'POST',
+            dataType: 'json',
+            complete: function() {
+                // Redirect regardless of response
+                window.location.href = '/customer-logout';
+            }
+        });
+    }
     
-    // Redirect to logout page immediately
+    // Fallback redirect in case API call fails completely
     setTimeout(function() {
-        window.location.href = '/customer-logout';
-    }, 500); // Small delay to ensure API call is sent
+        if (window.location.pathname !== '/customer-logout') {
+            window.location.href = '/customer-logout';
+        }
+    }, 2000);
 }
 
 // Check authentication and show/hide elements accordingly
@@ -193,7 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'isoft_customer_portal.api.get_customer_name',
                     callback: function(r) {
                         if (r.message) {
-                            document.getElementById('customer-name').textContent = r.message;
+                            const customerNameElement = document.getElementById('customer-name');
+                            if (customerNameElement) {
+                                customerNameElement.textContent = r.message;
+                            }
                         }
                     },
                     error: function(r) {

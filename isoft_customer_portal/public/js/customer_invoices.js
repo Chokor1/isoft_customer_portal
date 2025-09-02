@@ -1,6 +1,33 @@
 // Customer Invoices JavaScript
 frappe.provide('isoft_customer_portal');
 
+// Safe print document function that waits for the main portal script to load
+window.safePrintDocument = window.safePrintDocument || function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        // Main script is loaded, use the proper function
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Main script not loaded yet, wait a bit and try again
+        let attempts = 0;
+        const maxAttempts = 50; // Wait up to 5 seconds
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+                clearInterval(checkInterval);
+                window.isoft_customer_portal.printDocument(docType, docName);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                // Fallback: show error message
+                if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                    frappe.msgprint('Print function not available. Please refresh the page and try again.');
+                } else {
+                    alert('Print function not available. Please refresh the page and try again.');
+                }
+            }
+        }, 100);
+    }
+};
+
 isoft_customer_portal.CustomerInvoices = class CustomerInvoices {
     constructor() {
         this.currentPage = 1;
@@ -115,7 +142,7 @@ isoft_customer_portal.CustomerInvoices = class CustomerInvoices {
         
         invoices.forEach(invoice => {
             // Use currency from invoice data or fallback to cached currency
-            const currency = invoice.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+            const currency = invoice.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
             
             const row = `
                 <tr>
@@ -127,7 +154,7 @@ isoft_customer_portal.CustomerInvoices = class CustomerInvoices {
                     <td>${isoft_customer_portal.utils.formatCurrency(invoice.outstanding_amount, currency)}</td>
                     <td><span class="status-badge ${(invoice.status || 'unpaid').toLowerCase()}">${invoice.status || 'Unpaid'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Sales Invoice', '${invoice.name}')" title="Print Invoice">
+                        <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); window.safePrintDocument('Sales Invoice', '${invoice.name}')" title="Print Invoice">
                             <i class="fas fa-print"></i>
                         </button>
                     </td>
@@ -178,11 +205,38 @@ isoft_customer_portal.CustomerInvoices = class CustomerInvoices {
     }
 
     updateSummary(summary) {
-        const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         
-        $('#total-invoices').text(summary.total_invoices || 0);
-        $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
-        $('#outstanding-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_outstanding || 0, currency));
+        // Helper function to update element and make it visible
+        const updateElement = (selector, value, elementName) => {
+            const element = $(selector);
+            if (element.length) {
+                element.text(value);
+                // Mark as updated to prevent dashboard animations from hiding it
+                element.attr('data-summary-updated', 'true');
+                element.css({
+                    'opacity': '1',
+                    'transform': 'translateY(0)',
+                    'transition': 'all 0.6s ease-out'
+                });
+            } else {
+                console.warn(`Element ${selector} not found`);
+            }
+        };
+        
+        // Update all summary elements
+        updateElement('#total-invoices', summary.total_invoices || 0, 'total invoices');
+        updateElement('#paid-invoices', summary.paid_invoices || 0, 'paid invoices');
+        updateElement('#unpaid-invoices', summary.unpaid_invoices || 0, 'unpaid invoices');
+        updateElement('#overdue-invoices', summary.overdue_invoices || 0, 'overdue invoices');
+        updateElement('#return-invoices', summary.return_invoices || 0, 'return invoices');
+        updateElement('#credit-note-invoices', summary.credit_note_invoices || 0, 'credit note invoices');
+        updateElement('#total-amount', isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency), 'total amount');
+        
+        // Update outstanding amount (if element exists)
+        if ($('#outstanding-amount').length) {
+            updateElement('#outstanding-amount', isoft_customer_portal.utils.formatCurrency(summary.total_outstanding || 0, currency), 'outstanding amount');
+        }
     }
 
     applyFilters() {
@@ -192,10 +246,15 @@ isoft_customer_portal.CustomerInvoices = class CustomerInvoices {
             status: $('#status-filter').val()
         };
         
+        // Debug: Log the filter values
+        console.log('Original filter values:', filters);
+        
         // Remove empty filters
         Object.keys(filters).forEach(key => {
             if (!filters[key]) delete filters[key];
         });
+        
+        console.log('Cleaned filter values:', filters);
         
         this.currentFilters = filters;
         this.loadInvoices(1);

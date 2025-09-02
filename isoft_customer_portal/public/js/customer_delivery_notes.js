@@ -1,6 +1,33 @@
 // Customer Delivery Notes JavaScript
 frappe.provide('isoft_customer_portal');
 
+// Safe print document function that waits for the main portal script to load
+window.safePrintDocument = window.safePrintDocument || function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        // Main script is loaded, use the proper function
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Main script not loaded yet, wait a bit and try again
+        let attempts = 0;
+        const maxAttempts = 50; // Wait up to 5 seconds
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+                clearInterval(checkInterval);
+                window.isoft_customer_portal.printDocument(docType, docName);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                // Fallback: show error message
+                if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                    frappe.msgprint('Print function not available. Please refresh the page and try again.');
+                } else {
+                    alert('Print function not available. Please refresh the page and try again.');
+                }
+            }
+        }, 100);
+    }
+};
+
 isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
     constructor() {
         this.currentPage = 1;
@@ -104,7 +131,7 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
 
     createDeliveryNoteRow(deliveryNote) {
         // Use currency from delivery note data or fallback to cached currency
-        const currency = deliveryNote.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = deliveryNote.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         
         const formattedDate = isoft_customer_portal.utils.formatDate(deliveryNote.posting_date);
         const formattedAmount = isoft_customer_portal.utils.formatCurrency(deliveryNote.grand_total, currency);
@@ -118,7 +145,7 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
                 <td><strong>${formattedAmount}</strong></td>
                 <td><span class="status-badge ${statusClass}">${deliveryNote.status || 'To Bill'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Delivery Note', '${deliveryNote.name}')" title="Print Delivery Note">
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); window.safePrintDocument('Delivery Note', '${deliveryNote.name}')" title="Print Delivery Note">
                         <i class="fas fa-print"></i>
                     </button>
                 </td>
@@ -161,12 +188,28 @@ isoft_customer_portal.CustomerDeliveryNotes = class CustomerDeliveryNotes {
 
     updateSummary(summary) {
         if (summary) {
-            const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
             
-            $('#total-deliveries').text(summary.total_deliveries || 0);
-            $('#draft-deliveries').text(summary.draft_deliveries || 0);
-            $('#submitted-deliveries').text(summary.submitted_deliveries || 0);
-            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
+            // Helper function to update element and make it visible
+            const updateElement = (selector, value) => {
+                const element = $(selector);
+                if (element.length) {
+                    element.text(value);
+                    // Mark as updated to prevent dashboard animations from hiding it
+                    element.attr('data-summary-updated', 'true');
+                    element.css({
+                        'opacity': '1',
+                        'transform': 'translateY(0)',
+                        'transition': 'all 0.6s ease-out'
+                    });
+                }
+            };
+            
+            // Update all summary elements
+            updateElement('#total-deliveries', summary.total_deliveries || 0);
+            updateElement('#draft-deliveries', summary.draft_deliveries || 0);
+            updateElement('#submitted-deliveries', summary.submitted_deliveries || 0);
+            updateElement('#total-amount', isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
         }
     }
 

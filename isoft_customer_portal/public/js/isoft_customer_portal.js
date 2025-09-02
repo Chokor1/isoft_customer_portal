@@ -19,13 +19,13 @@ isoft_customer_portal.utils = {
                         this.cachedCurrency = r.message;
                         resolve(r.message);
                     } else {
-                        this.cachedCurrency = 'USD';
-                        resolve('USD');
+                        this.cachedCurrency = 'AKZ';
+                        resolve('AKZ');
                     }
                 },
                 error: () => {
-                    this.cachedCurrency = 'USD';
-                    resolve('USD');
+                    this.cachedCurrency = 'AKZ';
+                    resolve('AKZ');
                 }
             });
         });
@@ -36,8 +36,8 @@ isoft_customer_portal.utils = {
         if (!amount) return '0.00';
 
         if (!currency) {
-            // Use cached currency or default to USD
-            currency = this.cachedCurrency || 'USD';
+            // Use cached currency or default to AKZ
+            currency = this.cachedCurrency || 'AKZ';
         }
 
         // Custom currency formatting since frappe.format_currency is not available
@@ -50,7 +50,7 @@ isoft_customer_portal.utils = {
             maximumFractionDigits: 2
         });
         
-        // Add currency symbol
+        // Add currency symbol - default to AKZ
         const currencySymbols = {
             'USD': '$',
             'EUR': '€',
@@ -59,8 +59,16 @@ isoft_customer_portal.utils = {
             'AKZ': 'Kz'
         };
         
-        const symbol = currencySymbols[currency] || currency + ' ';
-        return symbol + formatted;
+        // Default to AKZ if currency is not specified or not found
+        const actualCurrency = currency || 'AKZ';
+        const symbol = currencySymbols[actualCurrency] || 'Kz ';
+        
+        // For AKZ/AOA, put symbol after the amount
+        if (actualCurrency === 'AKZ' || actualCurrency === 'AOA') {
+            return formatted + ' Kz';
+        } else {
+            return symbol + formatted;
+        }
     },
 
     // Format date
@@ -113,36 +121,35 @@ isoft_customer_portal.utils = {
     // Handle customer logout
     logout: function() {
         return new Promise((resolve) => {
+            // Clear client-side data first
+            try {
+                localStorage.removeItem('customer_data');
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear Frappe session data
+                if (frappe.session && typeof frappe.session.clear === 'function') {
+                    frappe.session.clear();
+                }
+                if (frappe.cache && typeof frappe.cache.clear === 'function') {
+                    frappe.cache.clear();
+                }
+                if (frappe.user) {
+                    frappe.user = null;
+                }
+            } catch (e) {
+                console.log('Client-side logout cleanup error:', e);
+            }
+            
             // Call the customer logout API
             frappe.call({
                 method: 'isoft_customer_portal.api.customer_logout',
                 callback: (r) => {
-                    if (r.message && r.message.success) {
-                        // Clear any cached data
-                        localStorage.removeItem('customer_data');
-                        sessionStorage.clear();
-                        
-                        // Clear any Frappe session data
-                        if (frappe.session) {
-                            try {
-                                if (typeof frappe.session.clear === 'function') {
-                                    frappe.session.clear();
-                                }
-                            } catch (e) {
-                                // Session clear error handled silently
-                            }
-                        }
-                        
-                        // Redirect to logout page
-                        window.location.href = '/customer-logout';
-                        resolve(true);
-                    } else {
-                        // Even if API fails, redirect to logout page
-                        window.location.href = '/customer-logout';
-                        resolve(false);
-                    }
+                    // Always redirect to logout page regardless of response
+                    window.location.href = '/customer-logout';
+                    resolve(true);
                 },
-                error: () => {
+                error: (r) => {
                     // Even if API fails, redirect to logout page
                     window.location.href = '/customer-logout';
                     resolve(false);

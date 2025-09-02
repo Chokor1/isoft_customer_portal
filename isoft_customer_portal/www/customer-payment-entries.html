@@ -10,43 +10,43 @@
         <div class="summary-grid">
             <div class="summary-card">
                 <div class="summary-value" id="total-entries">0</div>
-                <div class="summary-label">Total Entries</div>
+                <div class="summary-label" data-translate="Total Entries">Total Entries</div>
             </div>
             <div class="summary-card">
                 <div class="summary-value amount-positive" id="total-received">0</div>
-                <div class="summary-label">Total Received</div>
+                <div class="summary-label" data-translate="Total Received">Total Received</div>
             </div>
             <div class="summary-card">
-                <div class="summary-value amount-negative" id="total-paid">0</div>
-                <div class="summary-label">Total Paid</div>
+                <div class="summary-value amount-allocated" id="total-allocated">0</div>
+                <div class="summary-label" data-translate="Total Allocated Amount">Total Allocated Amount</div>
             </div>
-            <div class="summary-card balance-card" id="net-amount-card">
-                <div class="summary-value" id="net-amount">0</div>
-                <div class="summary-label">Net Amount</div>
+            <div class="summary-card">
+                <div class="summary-value amount-unallocated" id="unallocated-amount">0</div>
+                <div class="summary-label" data-translate="Unallocated Amount">Unallocated Amount</div>
             </div>
         </div>
 
         <!-- Filters -->
         <div class="filter-row">
             <div class="filter-group">
-                <label for="payment-type-filter">Type:</label>
+                <label for="payment-type-filter" data-translate="Payment Type">Type:</label>
                 <select id="payment-type-filter" class="filter-input">
-                    <option value="">All Types</option>
-                    <option value="Receive">Receive</option>
-                    <option value="Pay">Pay</option>
+                    <option value="" data-translate="All">All Types</option>
+                    <option value="Receive" data-translate="Receive">Receive</option>
+                    <option value="Pay" data-translate="Pay">Pay</option>
                 </select>
             </div>
             <div class="filter-group">
-                <label for="from-date">From Date:</label>
+                <label for="from-date" data-translate="From Date">From Date:</label>
                 <input type="date" id="from-date" class="filter-input">
             </div>
             <div class="filter-group">
-                <label for="to-date">To Date:</label>
+                <label for="to-date" data-translate="To Date">To Date:</label>
                 <input type="date" id="to-date" class="filter-input">
             </div>
             <div class="filter-group">
                 <button class="filter-btn" onclick="customerPaymentEntries.applyFilters()">
-                    <i class="fas fa-filter"></i> Apply Filters
+                    <i class="fas fa-filter"></i> <span data-translate="Apply Filters">Apply Filters</span>
                 </button>
             </div>
         </div>
@@ -54,16 +54,16 @@
         <!-- Payment Entries Table -->
         <div class="data-section">
             <div class="section-header">
-                <h2 class="section-title">Payment Entries</h2>
+                <h2 class="section-title" data-translate="Payments">Payment Entries</h2>
                 <div class="section-actions">
                     <button class="refresh-btn" title="Refresh" onclick="customerPaymentEntries.refreshData()">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     <button class="export-btn export-excel-btn">
-                        <i class="fas fa-file-excel"></i> Export Excel
+                        <i class="fas fa-file-excel"></i> <span data-translate="Export">Export Excel</span>
                     </button>
                     <button class="export-btn export-pdf-btn">
-                        <i class="fas fa-file-pdf"></i> Export PDF
+                        <i class="fas fa-file-pdf"></i> <span data-translate="Export">Export PDF</span>
                     </button>
                 </div>
             </div>
@@ -72,14 +72,14 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Payment Entry</th>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Mode of Payment</th>
-                            <th>Amount</th>
-                            <th>Reference No</th>
-                            <th>Status</th>
-                            <th>Print</th>
+                            <th data-translate="Payment Number">Payment Entry</th>
+                            <th data-translate="Date">Date</th>
+                            <th data-translate="Payment Type">Type</th>
+                            <th data-translate="Mode of Payment">Mode of Payment</th>
+                            <th data-translate="Amount">Amount</th>
+                            <th data-translate="Reference No">Reference No</th>
+                            <th data-translate="Status">Status</th>
+                            <th data-translate="Print">Print</th>
                         </tr>
                     </thead>
                     <tbody id="payment-entries-list">

@@ -8,6 +8,10 @@
   "js/customer_delivery_notes.js": ["public/js/customer_delivery_notes.js"],
   "js/customer_payment_entries.js": ["public/js/customer_payment_entries.js"],
   "js/dashboard_charts.js": ["public/js/dashboard_charts.js"],
+  "js/dashboard_animations.js": ["public/js/dashboard_animations.js"],
   "js/sidebar_navigation.js": ["public/js/sidebar_navigation.js"],
+  "js/customer_user_permissions.js": ["public/js/customer_user_permissions.js"],
+  "js/translations.js": ["public/js/translations.js"],
+  "js/language_switcher.js": ["public/js/language_switcher.js"],
   "css/isoft_customer_portal.css": ["public/css/isoft_customer_portal.css"]
 } 

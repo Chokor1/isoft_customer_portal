@@ -1,6 +1,33 @@
 // Customer Payment Entries JavaScript
 frappe.provide('isoft_customer_portal');
 
+// Safe print document function that waits for the main portal script to load
+window.safePrintDocument = window.safePrintDocument || function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        // Main script is loaded, use the proper function
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Main script not loaded yet, wait a bit and try again
+        let attempts = 0;
+        const maxAttempts = 50; // Wait up to 5 seconds
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+                clearInterval(checkInterval);
+                window.isoft_customer_portal.printDocument(docType, docName);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                // Fallback: show error message
+                if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                    frappe.msgprint('Print function not available. Please refresh the page and try again.');
+                } else {
+                    alert('Print function not available. Please refresh the page and try again.');
+                }
+            }
+        }, 100);
+    }
+};
+
 isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
     constructor() {
         this.currentPage = 1;
@@ -18,6 +45,36 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
             this.loadSummary();
         });
         this.bindEvents();
+        
+        // Listen for translation updates
+        $(document).on('translationsRefreshed', () => {
+            this.translateCardLabels();
+        });
+    }
+
+    translateCardLabels() {
+        // Force translate card labels when language changes
+        if (window.IsoftTranslation) {
+            const cardLabels = {
+                '.summary-label': {
+                    'Total Entries': 'Total Entries',
+                    'Total Received': 'Total Received', 
+                    'Total Allocated Amount': 'Total Allocated Amount',
+                    'Unallocated Amount': 'Unallocated Amount'
+                }
+            };
+
+            Object.keys(cardLabels).forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    const originalText = element.textContent.trim();
+                    if (cardLabels[selector][originalText]) {
+                        const translationKey = cardLabels[selector][originalText];
+                        element.textContent = window.IsoftTranslation.t(translationKey);
+                    }
+                });
+            });
+        }
     }
 
     bindEvents() {
@@ -45,8 +102,13 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
     loadPaymentEntries(page = 1) {
         this.currentPage = page;
         
+        console.log('DEBUG: loadPaymentEntries called with page:', page);
+        console.log('DEBUG: Current filters:', this.currentFilters);
+        console.log('DEBUG: Page size:', this.pageSize);
+        
         const tbody = $('#payment-entries-list');
-        tbody.html('<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> Loading payment entries...</td></tr>');
+        const loadingText = window.IsoftTranslation ? window.IsoftTranslation.t('Loading...') : 'Loading payment entries...';
+        tbody.html(`<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-spin"></i> ${loadingText}</td></tr>`);
         
         frappe.call({
             method: 'isoft_customer_portal.api.get_customer_payment_entries',
@@ -56,16 +118,30 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
                 page_length: this.pageSize
             },
             callback: (r) => {
+                console.log('DEBUG: API response received:', r);
+                console.log('DEBUG: API response message:', r.message);
+                
                 if (r.message) {
+                    console.log('DEBUG: Entries data:', r.message.entries);
+                    console.log('DEBUG: Total count:', r.message.total);
+                    console.log('DEBUG: Summary data:', r.message.summary);
+                    
                     this.displayPaymentEntries(r.message.entries || []);
                     this.updatePagination(r.message.total || 0, page);
                     this.updateSummary(r.message.summary || {});
+                } else {
+                    console.log('DEBUG: No message in API response');
                 }
+            },
+            error: (err) => {
+                console.log('DEBUG: API call error:', err);
             }
         });
     }
 
     loadSummary() {
+        console.log('DEBUG: loadSummary called');
+        
         frappe.call({
             method: 'isoft_customer_portal.api.get_customer_payment_entries',
             args: {
@@ -74,9 +150,18 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
                 page_length: 1
             },
             callback: (r) => {
+                console.log('DEBUG: loadSummary API response:', r);
+                console.log('DEBUG: loadSummary API message:', r.message);
+                
                 if (r.message && r.message.summary) {
+                    console.log('DEBUG: loadSummary summary data:', r.message.summary);
                     this.updateSummary(r.message.summary);
+                } else {
+                    console.log('DEBUG: loadSummary - no summary data found');
                 }
+            },
+            error: (err) => {
+                console.log('DEBUG: loadSummary API error:', err);
             }
         });
     }
@@ -85,7 +170,8 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
         const tbody = $('#payment-entries-list');
         
         if (entries.length === 0) {
-            tbody.html('<tr><td colspan="8" class="no-data">No payment entries found</td></tr>');
+            const noDataText = window.IsoftTranslation ? window.IsoftTranslation.t('No data available') : 'No payment entries found';
+            tbody.html(`<tr><td colspan="8" class="no-data">${noDataText}</td></tr>`);
             return;
         }
         
@@ -93,7 +179,7 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
         
         entries.forEach(entry => {
             // Use currency from entry data or fallback to cached currency
-            const currency = entry.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+            const currency = entry.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
             
             // Determine the color class based on payment type
             const amountClass = entry.payment_type === 'Receive' ? 'amount-positive' : 'amount-negative';
@@ -118,7 +204,7 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Payment Entry', '${entry.name}')" title="Print Payment Entry">
+                        <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); window.safePrintDocument('Payment Entry', '${entry.name}')" title="Print Payment Entry">
                             <i class="fas fa-print"></i>
                         </button>
                     </td>
@@ -151,36 +237,44 @@ isoft_customer_portal.CustomerPaymentEntries = class CustomerPaymentEntries {
     }
 
     updateSummary(summary) {
-        const currency = isoft_customer_portal.utils.cachedCurrency || 'USD';
+        console.log('DEBUG: updateSummary called with:', summary);
         
-        $('#total-entries').text(summary.total_entries || 0);
-        $('#total-received').text(isoft_customer_portal.utils.formatCurrency(summary.total_received || 0, currency));
-        $('#total-paid').text(isoft_customer_portal.utils.formatCurrency(summary.total_paid || 0, currency));
+        const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
+        console.log('DEBUG: Using currency:', currency);
         
-        // Apply color coding for net amount
-        const netAmount = summary.net_amount || 0;
-        const netAmountElement = $('#net-amount');
-        const netAmountCard = $('#net-amount-card');
+        // Helper function to update element and make it visible
+        const updateElement = (selector, value) => {
+            console.log(`DEBUG: Updating element ${selector} with value:`, value);
+            const element = $(selector);
+            if (element.length) {
+                console.log(`DEBUG: Element ${selector} found, updating...`);
+                element.text(value);
+                // Mark as updated to prevent dashboard animations from hiding it
+                element.attr('data-summary-updated', 'true');
+                element.css({
+                    'opacity': '1',
+                    'transform': 'translateY(0)',
+                    'transition': 'all 0.6s ease-out'
+                });
+                console.log(`DEBUG: Element ${selector} updated successfully`);
+            } else {
+                console.log(`DEBUG: Element ${selector} NOT FOUND!`);
+            }
+        };
         
-        // Update net amount text
-        netAmountElement.text(isoft_customer_portal.utils.formatCurrency(netAmount, currency));
+        // Update all summary elements
+        console.log('DEBUG: Updating total entries:', summary.total_entries || 0);
+        updateElement('#total-entries', summary.total_entries || 0);
         
-        // Remove previous classes
-        netAmountElement.removeClass('balance-positive balance-negative balance-zero');
-        netAmountCard.removeClass('positive negative');
+        console.log('DEBUG: Updating total received:', summary.total_received || 0);
+        updateElement('#total-received', isoft_customer_portal.utils.formatCurrency(summary.total_received || 0, currency));
         
-        if (netAmount > 0) {
-            // Positive net amount - more received than paid (green)
-            netAmountElement.addClass('balance-negative');
-            netAmountCard.addClass('negative');
-        } else if (netAmount < 0) {
-            // Negative net amount - more paid than received (red)
-            netAmountElement.addClass('balance-positive');
-            netAmountCard.addClass('positive');
-        } else {
-            // Zero net amount (gray)
-            netAmountElement.addClass('balance-zero');
-        }
+        console.log('DEBUG: Updating total allocated:', summary.total_allocated_amount || 0);
+        updateElement('#total-allocated', isoft_customer_portal.utils.formatCurrency(summary.total_allocated_amount || 0, currency));
+        
+        console.log('DEBUG: Updating unallocated amount:', summary.unallocated_amount || 0);
+        updateElement('#unallocated-amount', isoft_customer_portal.utils.formatCurrency(summary.unallocated_amount || 0, currency));
+
     }
 
     applyFilters() {

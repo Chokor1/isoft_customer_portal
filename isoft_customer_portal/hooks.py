@@ -20,7 +20,9 @@ app_include_js = [
     "/assets/js/customer_delivery_notes.js",
     "/assets/js/customer_payment_entries.js",
     "/assets/js/dashboard_charts.js",
-    "/assets/js/sidebar_navigation.js"
+    "/assets/js/dashboard_animations.js",
+    "/assets/js/sidebar_navigation.js",
+    "/assets/js/customer_user_permissions.js"
 ]
 
 app_include_css = [
@@ -96,19 +98,28 @@ website_pages = [
 # Installation
 after_install = "isoft_customer_portal.install.after_install"
 
+# Session hooks - runs after login when session is established
+on_session_creation = "isoft_customer_portal.auth.create_customer_user_permission_on_login"
+
+# Login hooks - runs immediately after successful login
+on_login = "isoft_customer_portal.auth.create_customer_user_permission_on_login"
+
 # Permissions
 has_permission = {
-    "Customer": "isoft_customer_portal.permissions.has_customer_permission",
-    "Sales Invoice": "isoft_customer_portal.permissions.has_customer_permission",
-    "Quotation": "isoft_customer_portal.permissions.has_customer_permission",
-    "Sales Order": "isoft_customer_portal.permissions.has_customer_permission",
-    "Delivery Note": "isoft_customer_portal.permissions.has_customer_permission",
-    "Payment Entry": "isoft_customer_portal.permissions.has_customer_permission"
+    "Customer": "isoft_customer_portal.auth.has_customer_permission",
+    "Sales Invoice": "isoft_customer_portal.auth.has_customer_permission",
+    "Quotation": "isoft_customer_portal.auth.has_customer_permission",
+    "Sales Order": "isoft_customer_portal.auth.has_customer_permission",
+    "Delivery Note": "isoft_customer_portal.auth.has_customer_permission",
+    "Payment Entry": "isoft_customer_portal.auth.has_customer_permission",
+    "Bank Account": "isoft_customer_portal.auth.has_customer_permission"
 }
 
 # DocTypes
 doc_events = {
     "Customer": {
+        "before_save": "isoft_customer_portal.events.customer_before_save",
+        "after_save": "isoft_customer_portal.events.customer_after_save",
         "on_update": "isoft_customer_portal.events.customer_updated"
     },
     "Sales Invoice": {

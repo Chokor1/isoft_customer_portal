@@ -1,6 +1,33 @@
 // Customer Quotations JavaScript
 frappe.provide('isoft_customer_portal');
 
+// Safe print document function that waits for the main portal script to load
+window.safePrintDocument = function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        // Main script is loaded, use the proper function
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Main script not loaded yet, wait a bit and try again
+        let attempts = 0;
+        const maxAttempts = 50; // Wait up to 5 seconds
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+                clearInterval(checkInterval);
+                window.isoft_customer_portal.printDocument(docType, docName);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                // Fallback: show error message
+                if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                    frappe.msgprint('Print function not available. Please refresh the page and try again.');
+                } else {
+                    alert('Print function not available. Please refresh the page and try again.');
+                }
+            }
+        }, 100);
+    }
+};
+
 isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
     constructor() {
         this.currentPage = 1;
@@ -104,7 +131,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
 
     createQuotationRow(quotation) {
         // Use currency from quotation data or fallback to cached currency
-        const currency = quotation.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = quotation.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         
         const formattedDate = isoft_customer_portal.utils.formatDate(quotation.transaction_date);
         const formattedAmount = isoft_customer_portal.utils.formatCurrency(quotation.grand_total, currency);
@@ -119,7 +146,7 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
                 <td><strong>${formattedAmount}</strong></td>
                 <td><span class="status-badge ${statusClass}">${quotation.status || 'Open'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Quotation', '${quotation.name}')" title="Print Quotation">
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); window.safePrintDocument('Quotation', '${quotation.name}')" title="Print Quotation">
                         <i class="fas fa-print"></i>
                     </button>
                 </td>
@@ -179,9 +206,28 @@ isoft_customer_portal.CustomerQuotations = class CustomerQuotations {
 
     updateSummary(summary) {
         if (summary) {
-            $('#total-quotations').text(summary.total_quotations || 0);
-            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0));
-            $('#open-quotations').text(summary.open_quotations || 0);
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
+            
+            // Helper function to update element and make it visible
+            const updateElement = (selector, value) => {
+                const element = $(selector);
+                if (element.length) {
+                    element.text(value);
+                    // Mark as updated to prevent dashboard animations from hiding it
+                    element.attr('data-summary-updated', 'true');
+                    element.css({
+                        'opacity': '1',
+                        'transform': 'translateY(0)',
+                        'transition': 'all 0.6s ease-out'
+                    });
+                }
+            };
+            
+            // Update all summary elements
+            updateElement('#total-quotations', summary.total_quotations || 0);
+            updateElement('#draft-quotations', summary.draft_quotations || 0);
+            updateElement('#submitted-quotations', summary.submitted_quotations || 0);
+            updateElement('#total-amount', isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
         }
     }
 

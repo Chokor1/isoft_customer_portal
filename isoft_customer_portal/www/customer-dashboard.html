@@ -6,65 +6,136 @@
 <!-- Dashboard Content -->
 <div class="main-content">
     <div class="container">
-        <!-- Summary Cards -->
+        <!-- Summary Cards with Enhanced Design -->
         <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-value" id="total-invoices">0</div>
-                <div class="summary-label">Total Invoices</div>
+            <div class="summary-card modern-card" data-animate="fadeInUp">
+                <div class="card-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="total-invoices">0</div>
+                    <div class="summary-label">Total Invoices</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span class="trend-value">+12%</span>
+                    </span>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="summary-value" id="total-quotations">0</div>
-                <div class="summary-label">Total Quotations</div>
+            <div class="summary-card modern-card" data-animate="fadeInUp" data-delay="0.1s">
+                <div class="card-icon">
+                    <i class="fas fa-quote-left"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="total-quotations">0</div>
+                    <div class="summary-label">Total Quotations</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span class="trend-value">+8%</span>
+                    </span>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="summary-value" id="total-sales-orders">0</div>
-                <div class="summary-label">Sales Orders</div>
+            <div class="summary-card modern-card" data-animate="fadeInUp" data-delay="0.2s">
+                <div class="card-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="total-sales-orders">0</div>
+                    <div class="summary-label">Sales Orders</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator neutral">
+                        <i class="fas fa-minus"></i>
+                        <span class="trend-value">0%</span>
+                    </span>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="summary-value" id="total-deliveries">0</div>
-                <div class="summary-label">Delivery Notes</div>
+            <div class="summary-card modern-card" data-animate="fadeInUp" data-delay="0.3s">
+                <div class="card-icon">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="total-deliveries">0</div>
+                    <div class="summary-label">Delivery Notes</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span class="trend-value">+5%</span>
+                    </span>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="summary-value" id="total-payments">0</div>
-                <div class="summary-label">Payment Entries</div>
+            <div class="summary-card modern-card" data-animate="fadeInUp" data-delay="0.4s">
+                <div class="card-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="total-payments">0</div>
+                    <div class="summary-label">Payment Entries</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span class="trend-value">+15%</span>
+                    </span>
+                </div>
             </div>
-            <div class="summary-card balance-card" id="balance-card">
-                <div class="summary-value" id="current-balance">0</div>
-                <div class="summary-label">Current Balance</div>
+            <div class="summary-card modern-card" id="balance-card" data-animate="fadeInUp" data-delay="0.5s">
+                <div class="card-icon balance-icon">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="card-content">
+                    <div class="summary-value" id="current-balance">0</div>
+                    <div class="summary-label">Current Balance</div>
+                </div>
+                <div class="card-trend">
+                    <span class="trend-indicator">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </div>
             </div>
         </div>
 
-        <!-- Analytics Dashboard -->
-        <div class="dashboard-grid">
+        <!-- Analytics Dashboard with Modern Design -->
+        <div class="dashboard-grid modern-grid">
             <!-- Revenue Chart -->
-            <div class="card chart-card">
+            <div class="card chart-card modern-card" data-animate="slideInLeft">
                 <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-chart-line"></i>
-                        Revenue Trend
-                    </h3>
-                    <div class="chart-period-selector">
-                        <button class="btn btn-sm btn-ghost period-btn" data-period="30">30D</button>
-                        <button class="btn btn-sm btn-ghost period-btn" data-period="90">90D</button>
-                        <button class="btn btn-sm btn-ghost period-btn active" data-period="365">1Y</button>
+                    <div class="header-content">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line chart-icon"></i>
+                            Revenue Trend
+                        </h3>
+                        <div class="chart-period-selector">
+                            <button class="btn btn-sm period-btn" data-period="30">30D</button>
+                            <button class="btn btn-sm period-btn" data-period="90">90D</button>
+                            <button class="btn btn-sm period-btn active" data-period="365">1Y</button>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body chart-container">
                     <canvas id="revenueChart" width="400" height="200"></canvas>
+                    <div class="chart-loading" id="revenue-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>Loading revenue data...</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="card quick-actions-card">
+            <div class="card quick-actions-card modern-card" data-animate="slideInRight">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-bolt"></i>
+                        <i class="fas fa-bolt chart-icon"></i>
                         Quick Actions
                     </h3>
                 </div>
                 <div class="card-body">
                     <div class="quick-actions-grid">
-                        <a href="/customer-invoices" class="quick-action-item">
+                        <a href="/customer-invoices" class="quick-action-item modern-action">
                             <div class="quick-action-icon">
                                 <i class="fas fa-file-invoice-dollar"></i>
                             </div>
@@ -74,7 +145,7 @@
                             </div>
                             <i class="fas fa-arrow-right quick-action-arrow"></i>
                         </a>
-                        <a href="/customer-sales-orders" class="quick-action-item">
+                        <a href="/customer-sales-orders" class="quick-action-item modern-action">
                             <div class="quick-action-icon">
                                 <i class="fas fa-shopping-cart"></i>
                             </div>
@@ -84,7 +155,7 @@
                             </div>
                             <i class="fas fa-arrow-right quick-action-arrow"></i>
                         </a>
-                        <a href="/customer-quotations" class="quick-action-item">
+                        <a href="/customer-quotations" class="quick-action-item modern-action">
                             <div class="quick-action-icon">
                                 <i class="fas fa-quote-left"></i>
                             </div>
@@ -94,7 +165,7 @@
                             </div>
                             <i class="fas fa-arrow-right quick-action-arrow"></i>
                         </a>
-                        <a href="/customer-payment-entries" class="quick-action-item">
+                        <a href="/customer-payment-entries" class="quick-action-item modern-action">
                             <div class="quick-action-icon">
                                 <i class="fas fa-credit-card"></i>
                             </div>
@@ -109,28 +180,58 @@
             </div>
 
             <!-- Status Breakdown -->
-            <div class="card status-card">
+            <div class="card status-card modern-card" data-animate="slideInUp">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-chart-pie"></i>
-                        <span class="status-chart-title">Sales Invoice Status</span>
+                        <i class="fas fa-chart-pie chart-icon"></i>
+                        <span class="status-chart-title">Invoice Status</span>
                     </h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body chart-container">
                     <canvas id="statusChart" width="300" height="300"></canvas>
+                    <div class="chart-loading" id="status-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>Loading status data...</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Top Items Chart -->
-            <div class="card items-card">
+            <div class="card items-card modern-card" data-animate="slideInUp" data-delay="0.2s">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-chart-bar"></i>
-                        <span class="items-chart-title">Top Items by Revenue</span>
+                        <i class="fas fa-chart-bar chart-icon"></i>
+                        <span class="items-chart-title">Top Items</span>
+                    </h3>
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="itemsChart" width="400" height="300"></canvas>
+                    <div class="chart-loading" id="items-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>Loading items data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="card activity-card modern-card" data-animate="fadeInUp" data-delay="0.4s">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-history chart-icon"></i>
+                        Recent Activity
                     </h3>
                 </div>
                 <div class="card-body">
-                    <canvas id="itemsChart" width="400" height="300"></canvas>
+                    <div class="activity-timeline" id="activity-timeline">
+                        <!-- Activity items will be populated by JavaScript -->
+                        <div class="activity-item placeholder">
+                            <div class="activity-header">
+                                <h4 class="activity-title">Loading activities...</h4>
+                                <span class="activity-time">-</span>
+                            </div>
+                            <p class="activity-description">Please wait while we load your recent activities.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -171,22 +272,36 @@
 <script>
     // Check authentication before initializing dashboard
     $(document).ready(function() {
-        frappe.call({
-            method: 'isoft_customer_portal.api.check_customer_auth',
-            callback: function(r) {
-                if (r.message && r.message.authenticated) {
-                    // User is authenticated, initialize dashboard
-                    window.customerDashboard = new isoft_customer_portal.CustomerDashboard();
-                } else {
-                    // User is not authenticated, redirect to login
-                    window.location.href = '/customer-login';
-                }
-            },
-            error: function() {
-                // Error occurred, redirect to login
-                window.location.href = '/customer-login';
+        // Wait for frappe to be available
+        function waitForFrappe() {
+            if (typeof frappe !== 'undefined' && frappe.call) {
+                frappe.call({
+                    method: 'isoft_customer_portal.api.check_customer_auth',
+                    callback: function(r) {
+                        if (r.message && r.message.authenticated) {
+                            // User is authenticated, initialize dashboard
+                            if (typeof isoft_customer_portal !== 'undefined' && isoft_customer_portal.CustomerDashboard) {
+                                window.customerDashboard = new isoft_customer_portal.CustomerDashboard();
+                            } else {
+                                console.warn('CustomerDashboard class not available');
+                            }
+                        } else {
+                            // User is not authenticated, redirect to login
+                            window.location.href = '/customer-login';
+                        }
+                    },
+                    error: function() {
+                        // Error occurred, redirect to login
+                        window.location.href = '/customer-login';
+                    }
+                });
+            } else {
+                // Frappe not ready yet, wait a bit more
+                setTimeout(waitForFrappe, 100);
             }
-        });
+        }
+        
+        waitForFrappe();
     });
 </script>
 {% endblock %}

@@ -1,6 +1,33 @@
 // Customer Sales Orders JavaScript
 frappe.provide('isoft_customer_portal');
 
+// Safe print document function that waits for the main portal script to load
+window.safePrintDocument = window.safePrintDocument || function(docType, docName) {
+    if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+        // Main script is loaded, use the proper function
+        window.isoft_customer_portal.printDocument(docType, docName);
+    } else {
+        // Main script not loaded yet, wait a bit and try again
+        let attempts = 0;
+        const maxAttempts = 50; // Wait up to 5 seconds
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.isoft_customer_portal && window.isoft_customer_portal.printDocument) {
+                clearInterval(checkInterval);
+                window.isoft_customer_portal.printDocument(docType, docName);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                // Fallback: show error message
+                if (typeof frappe !== 'undefined' && frappe.msgprint) {
+                    frappe.msgprint('Print function not available. Please refresh the page and try again.');
+                } else {
+                    alert('Print function not available. Please refresh the page and try again.');
+                }
+            }
+        }, 100);
+    }
+};
+
 isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
     constructor() {
         this.currentPage = 1;
@@ -104,7 +131,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
 
     createSalesOrderRow(salesOrder) {
         // Use currency from sales order data or fallback to cached currency
-        const currency = salesOrder.currency || isoft_customer_portal.utils.cachedCurrency || 'USD';
+        const currency = salesOrder.currency || isoft_customer_portal.utils.cachedCurrency || 'AKZ';
         
         const formattedDate = isoft_customer_portal.utils.formatDate(salesOrder.transaction_date);
         const formattedAmount = isoft_customer_portal.utils.formatCurrency(salesOrder.grand_total, currency);
@@ -119,7 +146,7 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
                 <td><strong>${formattedAmount}</strong></td>
                 <td><span class="status-badge ${statusClass}">${salesOrder.status || 'Draft'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); isoft_customer_portal.printDocument('Sales Order', '${salesOrder.name}')" title="Print Sales Order">
+                    <button class="btn btn-sm btn-outline-primary print-btn" onclick="event.stopPropagation(); window.safePrintDocument('Sales Order', '${salesOrder.name}')" title="Print Sales Order">
                         <i class="fas fa-print"></i>
                     </button>
                 </td>
@@ -189,9 +216,28 @@ isoft_customer_portal.CustomerSalesOrders = class CustomerSalesOrders {
 
     updateSummary(summary) {
         if (summary) {
-            $('#total-sales-orders').text(summary.total_sales_orders || 0);
-            $('#total-amount').text(isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0));
-            $('#pending-delivery').text(summary.pending_delivery || 0);
+            const currency = isoft_customer_portal.utils.cachedCurrency || 'AKZ';
+            
+            // Helper function to update element and make it visible
+            const updateElement = (selector, value) => {
+                const element = $(selector);
+                if (element.length) {
+                    element.text(value);
+                    // Mark as updated to prevent dashboard animations from hiding it
+                    element.attr('data-summary-updated', 'true');
+                    element.css({
+                        'opacity': '1',
+                        'transform': 'translateY(0)',
+                        'transition': 'all 0.6s ease-out'
+                    });
+                }
+            };
+            
+            // Update all summary elements
+            updateElement('#total-orders', summary.total_sales_orders || 0);
+            updateElement('#draft-orders', summary.draft_orders || 0);
+            updateElement('#submitted-orders', summary.submitted_orders || 0);
+            updateElement('#total-amount', isoft_customer_portal.utils.formatCurrency(summary.total_amount || 0, currency));
         }
     }
 

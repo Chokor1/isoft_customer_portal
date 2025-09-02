@@ -1,93 +1,106 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import frappe
+from frappe.permissions import add_permission
 
 def after_install():
     """Run after app installation"""
     try:
-        # Create customer portal role if it doesn't exist
-        if not frappe.db.exists("Role", "Customer Portal"):
-            role = frappe.get_doc({
-                "doctype": "Role",
-                "role_name": "Customer Portal",
-                "desk_access": 0,
-                "restrict_to_domain": None
-            })
-            role.insert()
+        # Create customer portal role and permissions
+        create_customer_portal_role()
         
-        # Create comprehensive Isoft Customer Portal user type if it doesn't exist
+        # Create comprehensive Isoft Customer Portal user type
         if not frappe.db.exists("User Type", "Isoft Customer Portal"):
             create_isoft_customer_portal_user_type()
         else:
-            # Update existing user type if needed
             update_existing_user_type()
         
         # Create website pages
         create_website_pages()
         
-        # Set up permissions
+        # Set up permissions for existing customers
         setup_permissions()
-        
-        # Test the setup
-        test_user_type_setup()
         
         frappe.msgprint("Isoft Customer Portal setup completed successfully!")
         
     except Exception as e:
         frappe.log_error(f"Error in after_install: {str(e)}")
 
-def test_user_type_setup():
-    """Test that the user type setup is working correctly"""
-    try:
-        # Verify user type exists
-        if not frappe.db.exists("User Type", "Isoft Customer Portal"):
-            frappe.log_error("Isoft Customer Portal user type was not created")
-            return False
-        
-        user_type = frappe.get_doc("User Type", "Isoft Customer Portal")
-        
-        # Verify basic fields
-        if user_type.role != "Customer Portal":
-            frappe.log_error(f"User type role is incorrect: {user_type.role}")
-            return False
-        
-        if user_type.apply_user_permission_on != "Contact":
-            frappe.log_error(f"User type apply_user_permission_on is incorrect: {user_type.apply_user_permission_on}")
-            return False
-        
-        # Verify user doctypes
-        user_doctypes = [dt.document_type for dt in user_type.user_doctypes]
-        required_doctypes = ["Sales Invoice", "Quotation", "Sales Order", "Delivery Note", "Payment Entry", "Customer", "Address", "Contact"]
-        
-        for doctype in required_doctypes:
-            if doctype not in user_doctypes:
-                frappe.log_error(f"Required doctype {doctype} not found in user type")
-                return False
-        
-        # Verify select doctypes
-        select_doctypes = [dt.document_type for dt in user_type.select_doctypes]
-        required_select_doctypes = ["Company", "Currency", "Customer Group", "Territory"]
-        
-        for doctype in required_select_doctypes:
-            if doctype not in select_doctypes:
-                frappe.log_error(f"Required select doctype {doctype} not found in user type")
-                return False
-        
-        # Verify modules
-        modules = [m.module for m in user_type.user_type_modules]
-        required_modules = ["Selling", "Stock", "Accounts", "CRM"]
-        
-        for module in required_modules:
-            if module not in modules:
-                frappe.log_error(f"Required module {module} not found in user type")
-                return False
-        
-
-        return True
-        
-    except Exception as e:
-        frappe.log_error(f"Error testing user type setup: {str(e)}")
-        return False
+def create_customer_portal_role():
+    """Create Customer Portal role with proper permissions"""
+    if not frappe.db.exists("Role", "Customer Portal"):
+        role = frappe.get_doc({
+            "doctype": "Role",
+            "role_name": "Customer Portal",
+            "desk_access": 0,
+            "restrict_to_domain": None,
+            "home_page": "customer-dashboard"
+        })
+        role.insert()
+    
+    # Create role permissions for Customer Portal role
+    role_permissions = [
+        {"doctype": "Sales Invoice", "read": 1, "print": 1},
+        {"doctype": "Quotation", "read": 1, "print": 1},
+        {"doctype": "Sales Order", "read": 1, "print": 1},
+        {"doctype": "Delivery Note", "read": 1, "print": 1},
+        {"doctype": "Payment Entry", "read": 1, "print": 1},
+        {"doctype": "Customer", "read": 1, "print": 1},
+        {"doctype": "Address", "read": 1, "print": 1},
+        {"doctype": "Contact", "read": 1, "print": 1},
+        {"doctype": "Bank Account", "read": 1, "print": 1},
+    ]
+    
+    for perm in role_permissions:
+        try:
+            # Check if Custom DocPerm already exists
+            existing_perm = frappe.db.exists("Custom DocPerm", {
+                "role": "Customer Portal",
+                "parent": perm["doctype"]
+            })
+            
+            if not existing_perm:
+                # Create Custom DocPerm for proper document-level permissions
+                doc_perm = frappe.get_doc({
+                    "doctype": "Custom DocPerm",
+                    "role": "Customer Portal",
+                    "parent": perm["doctype"],
+                    "parenttype": "DocType",
+                    "parentfield": "permissions",
+                    "read": perm.get("read", 0),
+                    "write": 0,
+                    "create": 0,
+                    "delete": 0,
+                    "submit": 0,
+                    "cancel": 0,
+                    "amend": 0,
+                    "print": perm.get("print", 0),
+                    "email": 0,
+                    "report": 0,
+                    "import": 0,
+                    "export": 0,
+                    "share": 0,
+                    "if_owner": 0
+                })
+                doc_perm.insert(ignore_permissions=True)
+                frappe.logger().info(f"Created Custom DocPerm for {perm['doctype']} with print permission")
+            else:
+                # Update existing permission to ensure print is enabled
+                doc_perm = frappe.get_doc("Custom DocPerm", existing_perm)
+                doc_perm.read = perm.get("read", 0)
+                doc_perm.print = perm.get("print", 0)
+                doc_perm.write = 0
+                doc_perm.create = 0
+                doc_perm.delete = 0
+                doc_perm.submit = 0
+                doc_perm.cancel = 0
+                doc_perm.amend = 0
+                doc_perm.save(ignore_permissions=True)
+                frappe.logger().info(f"Updated Custom DocPerm for {perm['doctype']} with print permission")
+                
+        except Exception as e:
+            frappe.log_error(f"Error creating Custom DocPerm for {perm['doctype']}: {str(e)}")
+            continue
 
 def update_existing_user_type():
     """Update existing Isoft Customer Portal user type with latest permissions"""
@@ -102,11 +115,14 @@ def update_existing_user_type():
         if user_type.user_id_field != "user":
             user_type.user_id_field = "user"
         
+        # Clear existing modules (no modules needed)
+        user_type.user_type_modules = []
+        
         # Ensure all required user doctypes are present with READ-ONLY permissions
         existing_doctypes = [dt.document_type for dt in user_type.user_doctypes]
         required_doctypes = [
             "Sales Invoice", "Quotation", "Sales Order", "Delivery Note", 
-            "Payment Entry", "Customer", "Address", "Contact"
+            "Payment Entry", "Customer", "Address", "Contact", "Bank Account"
         ]
         
         for doctype_name in required_doctypes:
@@ -115,24 +131,24 @@ def update_existing_user_type():
                     "document_type": doctype_name,
                     "is_custom": 0,
                     "read": 1,
-                    "write": 0,  # All documents are read-only
-                    "create": 0,  # No create permission
+                    "write": 0,
+                    "create": 0,
                     "submit": 0,
                     "cancel": 0,
                     "amend": 0,
-                    "delete": 0  # No delete permission
+                    "delete": 0
                 })
             else:
                 # Update existing doctype to ensure read-only permissions
                 for dt in user_type.user_doctypes:
                     if dt.document_type == doctype_name:
                         dt.read = 1
-                        dt.write = 0  # Ensure read-only
-                        dt.create = 0  # Ensure no create
+                        dt.write = 0
+                        dt.create = 0
                         dt.submit = 0
                         dt.cancel = 0
                         dt.amend = 0
-                        dt.delete = 0  # Ensure no delete
+                        dt.delete = 0
                         break
         
         # Ensure all required select doctypes are present
@@ -148,16 +164,6 @@ def update_existing_user_type():
             if doctype_name not in existing_select_doctypes:
                 user_type.append("select_doctypes", {
                     "document_type": doctype_name
-                })
-        
-        # Ensure all required modules are present
-        existing_modules = [m.module for m in user_type.user_type_modules]
-        required_modules = ["Selling", "Stock", "Accounts", "CRM"]
-        
-        for module_name in required_modules:
-            if module_name not in existing_modules:
-                user_type.append("user_type_modules", {
-                    "module": module_name
                 })
         
         user_type.save()
@@ -237,7 +243,7 @@ def create_isoft_customer_portal_user_type():
             "document_type": "Customer",
             "is_custom": 0,
             "read": 1,
-            "write": 0,  # Changed to read-only
+            "write": 0,
             "create": 0,
             "submit": 0,
             "cancel": 0,
@@ -248,23 +254,34 @@ def create_isoft_customer_portal_user_type():
             "document_type": "Address",
             "is_custom": 0,
             "read": 1,
-            "write": 0,  # Changed to read-only
-            "create": 0,  # Changed to no create
+            "write": 0,
+            "create": 0,
             "submit": 0,
             "cancel": 0,
             "amend": 0,
-            "delete": 0  # Changed to no delete
+            "delete": 0
         },
         {
             "document_type": "Contact",
             "is_custom": 0,
             "read": 1,
-            "write": 0,  # Changed to read-only
-            "create": 0,  # Changed to no create
+            "write": 0,
+            "create": 0,
             "submit": 0,
             "cancel": 0,
             "amend": 0,
-            "delete": 0  # Changed to no delete
+            "delete": 0
+        },
+        {
+            "document_type": "Bank Account",
+            "is_custom": 0,
+            "read": 1,
+            "write": 0,
+            "create": 0,
+            "submit": 0,
+            "cancel": 0,
+            "amend": 0,
+            "delete": 0
         }
     ]
     
@@ -284,13 +301,7 @@ def create_isoft_customer_portal_user_type():
             "document_type": doctype_name
         })
     
-    # Add user type modules
-    user_type_modules = ["Selling", "Stock", "Accounts", "CRM"]
-    
-    for module_name in user_type_modules:
-        user_type.append("user_type_modules", {
-            "module": module_name
-        })
+    # No modules needed for customer portal - users should not have module access
     
     user_type.insert()
 
@@ -362,6 +373,9 @@ def create_website_pages():
 
 def setup_permissions():
     """Set up permissions for customer portal"""
+    # Create/update role permissions first
+    create_customer_portal_role()
+    
     # Add customer portal role and user type to existing customers
     customers = frappe.get_all("Customer", fields=["name", "user"])
     for customer in customers:
@@ -382,4 +396,18 @@ def setup_permissions():
                 
             except Exception as e:
                 frappe.log_error(f"Error setting up permissions for user {customer.user}: {str(e)}")
-                continue 
+                continue
+
+def update_customer_portal_permissions():
+    """Update Customer Portal role permissions - can be run manually"""
+    frappe.only_for("System Manager")
+    
+    try:
+        # Recreate the role permissions with print access
+        create_customer_portal_role()
+        frappe.msgprint("Customer Portal role permissions updated successfully with print access!")
+        return {"success": True, "message": "Permissions updated successfully"}
+    except Exception as e:
+        frappe.log_error(f"Error updating Customer Portal permissions: {str(e)}")
+        frappe.throw(f"Error updating permissions: {str(e)}")
+        return {"success": False, "message": str(e)} 

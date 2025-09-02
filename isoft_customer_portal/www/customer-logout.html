@@ -119,47 +119,53 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Perform client-side cleanup
-    performClientSideCleanup();
+    // Perform final client-side cleanup on logout page
+    performFinalClientSideCleanup();
     
-    // Set up auto-redirect to login page
-    setTimeout(function() {
-        window.location.href = '/customer-login';
-    }, 3000);
+    // Add click handler for the login button
+    const loginBtn = document.querySelector('.login-link-btn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Clear any remaining data before redirect
+            performFinalClientSideCleanup();
+            window.location.href = '/customer-login';
+        });
+    }
 });
 
-function performClientSideCleanup() {
-    // Clear any client-side data
-    if (typeof frappe !== 'undefined' && frappe.session) {
-        try {
-            if (typeof frappe.session.clear === 'function') {
+function performFinalClientSideCleanup() {
+    try {
+        // Clear all localStorage
+        localStorage.clear();
+        
+        // Clear all sessionStorage
+        sessionStorage.clear();
+        
+        // Clear any frappe-specific data
+        if (typeof frappe !== 'undefined') {
+            if (frappe.session && typeof frappe.session.clear === 'function') {
                 frappe.session.clear();
             }
-        } catch (e) {
-            // Session clear failed, continue with other cleanup
-        }
-    }
-    
-    // Clear browser storage
-    try {
-        localStorage.removeItem('customer_data');
-        sessionStorage.clear();
-    } catch (e) {
-        // Storage clear failed, continue
-    }
-    
-    // Additional Frappe cleanup if available
-    if (typeof frappe !== 'undefined') {
-        try {
-            if (frappe.cache) {
+            if (frappe.cache && typeof frappe.cache.clear === 'function') {
                 frappe.cache.clear();
             }
             if (frappe.user) {
                 frappe.user = null;
             }
-        } catch (e) {
-            // Frappe cleanup failed, continue
+            // Force session to Guest
+            if (frappe.session) {
+                frappe.session.user = 'Guest';
+            }
         }
+        
+        // Clear any cookies related to authentication
+        document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+    } catch (e) {
+        console.log('Final cleanup error:', e);
     }
 }
 </script>
